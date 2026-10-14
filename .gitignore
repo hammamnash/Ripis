@@ -147,3 +147,13 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Reference Data -- real financial exports. `*.xlsx`, not `.xlsx`: the bare form
+# matches only a file literally named ".xlsx" and silently ignores nothing.
+*.xlsx
+*.csv
+
+# AI Related file, will include later
+.ai/
+.hermes/
+.hermes.md
