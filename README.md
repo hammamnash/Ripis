@@ -17,7 +17,7 @@ It takes seriously two things about real money that simple trackers handle badly
 transaction also stores what it was worth in your primary currency at the moment you entered it —
 frozen, so changing your primary currency later never rewrites your history.
 
-**Some balances are debts.** A credit card holding 2,000,000 of debt is stored as **2,000,000**, the
+**Some balances are debts.** A credit card holding Rp 2.000.000 of debt is stored as **2.000.000**, the
 figure the statement prints. Ripis subtracts it from your net worth because the wallet *is marked as a
 liability* — not because of a minus sign — so a card you've overpaid shows as money you have instead of
 being clamped to zero.
