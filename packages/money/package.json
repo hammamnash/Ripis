@@ -1,0 +1,14 @@
+{
+  "name": "@ripis/money",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The one currency-aware formatter. Formatting only — it decides no value (I1-I3).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json",
+    "test": "vitest run"
+  }
+}
