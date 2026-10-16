@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ripis — Transactions (mockup 001)</title>
+<link rel="stylesheet" href="../_shared/tokens.css">
+<link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/primitives.css">
+<link rel="stylesheet" href="../_shared/surfaces.css">
+</head>
+<body>
+<div id="mk"></div>
+
+<div class="phone">
+  <header class="appbar">
+    <div class="appbar__top">
+      <h1 class="appbar__title heading-sm">Transactions</h1>
+      <button class="icon-btn" type="button" id="search" aria-label="Search transactions"></button>
+    </div>
+    <div class="monthsel" id="monthsel"></div>
+  </header>
+
+  <div class="screen">
+    <section id="bandwrap"></section>
+    <div class="chiprow" id="chips" role="group" aria-label="Filter by type"></div>
+    <div class="txnlist" id="rows" aria-live="polite"></div>
+    <div id="empty"></div>
+  </div>
+</div>
+
+<nav class="tabbar" id="tabbar"></nav>
+<div id="fabwrap"></div>
+
+<script src="../_shared/ledger.js"></script>
+<script src="../_shared/render.js"></script>
+<script src="../_shared/charts.js"></script>
+<script src="../_shared/ui.js"></script>
+<script>
+(function () {
+  'use strict';
+  var R = window.RIPIS, U = window.RIPIS_UI, N = window.RIPIS_RENDER;
+  var SCREENS = [
+    { id: 'list', name: '001 transactions', href: '../001-transactions-list/index.html' },
+    { id: 'input', name: '002 input', href: '../002-transaction-input/index.html' },
+    { id: 'dash', name: '003 dashboard', href: '../003-dashboard/index.html' }
+  ];
+  var ym = U.storedYm() || R.CURRENT_YM;
+  var filter = 'all';
+  var dropped = [];
+
+  function shell() {
+    document.getElementById('mk').innerHTML = U.mkbar('list', SCREENS);
+    document.getElementById('tabbar').innerHTML = U.tabbar('transactions');
+    document.getElementById('fabwrap').innerHTML = U.fab('../002-transaction-input/index.html', 'Add transaction');
+    document.getElementById('search').innerHTML = window.RIPIS_ICON('search');
+    U.bindMissing(document.getElementById('tabbar'));
+  }
+
+  function monthsel() {
+    var atNow = ym === R.CURRENT_YM;
+    return '<button class="monthsel__btn" type="button" id="prev" aria-label="Previous month">' +
+        window.RIPIS_ICON('left', 20) + '</button>' +
+      '<span class="monthsel__label">' + R.monthLabel(ym) + '</span>' +
+      '<button class="monthsel__btn" type="button" id="next" aria-label="Next month"' +
+        (atNow ? ' disabled style="opacity:.35;cursor:default"' : '') + '>' +
+        window.RIPIS_ICON('right', 20) + '</button>';
+  }
+
+  var FILTERS = [
+    { id: 'all', label: 'All' },
+    { id: 'expense', label: 'Expense' },
+    { id: 'income', label: 'Income' },
+    { id: 'transfer', label: 'Transfer' }
+  ];
+
+  function rowsFor(ym, filter) {
+    var list = R.monthTx(ym).slice().sort(function (a, b) {
+      return a.date < b.date ? 1 : (a.date > b.date ? -1 : (a.id < b.id ? 1 : -1));
+    });
+    if (filter === 'all') { return list; }
+    if (filter === 'transfer') {
+      return list.filter(function (t) { return t.type === 'transfer' || t.type === 'exchange'; });
+    }
+    return list.filter(function (t) { return t.type === filter; });
+  }
+
+  function chiprow() {
+    var all = R.monthTx(ym);
+    return FILTERS.map(function (f) {
+      var n = f.id === 'all' ? all.length
+        : f.id === 'transfer' ? all.filter(function (t) { return t.type === 'transfer' || t.type === 'exchange'; }).length
+        : all.filter(function (t) { return t.type === f.id; }).length;
+      return '<button class="chip" type="button" data-f="' + f.id + '" aria-pressed="' +
+        (f.id === filter) + '">' + f.label +
+        '<span class="chip__count tabular">' + n + '</span></button>';
+    }).join('');
+  }
+
+  var TYPES = { expense: 'Expense', income: 'Income', transfer: 'Transfer', exchange: 'Exchange' };
+
+  function findRow(id) {
+    return R.TX.filter(function (t) { return t.id === id; })[0];
+  }
+
+  function detailBody(t) {
+    var w = R.wallet(t.wallet), c = R.category(t.cat);
+    var out = [];
+    out.push(['Date', R.formatDate(t.date)]);
+    out.push(['Type', TYPES[t.type]]);
+    if (c) { out.push(['Category', c.name]); }
+    var isX = t.type === 'transfer' || t.type === 'exchange';
+    out.push([isX ? 'From wallet' : 'Wallet', w.name + ' \u00b7 ' + w.currency]);
+    if (isX) {
+      var d = R.wallet(t.dest);
+      out.push(['To wallet', d.name + ' \u00b7 ' + d.currency]);
+      out.push(['Amount out', R.formatMoney(t.amount, w.currency)]);
+      out.push(['Amount in', R.formatMoney(t.dest_amount, d.currency)]);
+    } else {
+      out.push(['Amount', R.formatMoney(t.amount, t.currency || w.currency)]);
+    }
+    if (t.base && t.cur && t.cur !== R.PRIMARY) {
+      out.push(['Base (frozen)', R.formatMoney(t.base, R.PRIMARY)]);
+    }
+    if (t.note) { out.push(['Note', t.note]); }
+    if (t.tags && t.tags.length) { out.push(['Tags', t.tags.join(', ')]); }
+    var html = '<div>' + out.map(function (r) {
+      return '<div class="metarow"><span class="metarow__k">' + N.esc(r[0]) +
+        '</span><span class="metarow__v">' + N.esc(r[1]) + '</span></div>';
+    }).join('') + '</div>';
+    if (t.type === 'exchange') {
+      html += '<p class="field__hint">Implied rate ' + N.esc(R.impliedRate(t).text) +
+        ' \u2014 shown at display time only; no rate is ever stored (ADR-0004).</p>';
+    }
+    html += '<p class="auditline">Recorded ' + N.esc(R.formatDate(t.recorded.slice(0, 10))) + ' ' +
+      N.esc(t.recorded.slice(11, 16)) + ' \u2014 audit only, never used for reporting (ADR-0007).</p>';
+    return html;
+  }
+
+  function openDetail(t) {
+    U.sheet('Transaction', detailBody(t),
+      '<button class="pill pill--tertiary" type="button" data-d="edit">Edit</button>' +
+      '<button class="pill pill--tertiary pill--destructive" type="button" data-d="delete">Delete</button>');
+    var p = document.querySelector('.sheet');
+    p.querySelector('[data-d="edit"]').addEventListener('click', function () {
+      U.closeSheet();
+      U.toast('Edit opens 002 Transaction input \u2014 not wired across files.');
+    });
+    p.querySelector('[data-d="delete"]').addEventListener('click', function () {
+      U.closeSheet();
+      dropRow(t);
+    });
+  }
+
+  /* A delete is a state change the reviewer can see and undo. The row is only
+     removed from THIS render — nothing is written anywhere. */
+  function dropRow(t) {
+    dropped.push(t.id);
+    render();
+    U.toast('Deleted \u2014 soft delete keeps the row and the audit trail (ADR-0005).', 'Undo', function () {
+      dropped = dropped.filter(function (x) { return x !== t.id; });
+      render();
+    });
+  }
+
+  function onAct(id, what) {
+    var t = findRow(id);
+    if (!t) { return; }
+    if (what === 'open') { openDetail(t); return; }
+    if (what === 'delete') { dropRow(t); return; }
+    if (what === 'duplicate') {
+      U.toast('Duplicate would pre-fill 002 with "' + N.esc(t.note) + '" \u2014 not wired across files.');
+      return;
+    }
+    U.toast('Edit would open 002 Transaction input for ' + N.esc(t.note) + ' \u2014 not wired across files.');
+  }
+
+  function render() {
+    document.getElementById('monthsel').innerHTML = monthsel();
+    document.getElementById('bandwrap').innerHTML = N.band(ym);
+    document.getElementById('chips').innerHTML = chiprow();
+    var list = rowsFor(ym, filter).filter(function (t) { return dropped.indexOf(t.id) < 0; });
+    var rows = document.getElementById('rows');
+    rows.innerHTML = list.map(N.txnRow).join('');
+    document.getElementById('empty').innerHTML = list.length ? '' :
+      '<div class="empty">' + window.RIPIS_ICON('list', 48) +
+      '<div class="empty__title">Nothing here for ' + R.monthLabel(ym) + '</div>' +
+      '<p class="empty__body">No ' + (filter === 'all' ? 'transactions' : filter + ' rows') +
+      ' in this month. Log one and it appears immediately.</p>' +
+      '<a class="pill pill--primary" href="../002-transaction-input/index.html">Add transaction</a></div>';
+    U.attachRows(rows, onAct);
+    var pv = document.getElementById('prev'), nx = document.getElementById('next');
+    pv.addEventListener('click', function () { ym = R.prevMonth(ym); render(); });
+    if (nx && !nx.disabled) { nx.addEventListener('click', function () { ym = R.nextMonth(ym); render(); }); }
+    Array.prototype.forEach.call(document.querySelectorAll('.chip[data-f]'), function (b) {
+      b.addEventListener('click', function () { filter = b.getAttribute('data-f'); render(); });
+    });
+    var s = document.getElementById('search');
+    s.onclick = function () {
+      U.toast('Search is not part of these three screens \u2014 server-side search would debounce ~300ms.');
+    };
+  }
+
+  shell();
+  render();
+  U.applyTheme();
+})();
+</script>
+</body>
+</html>

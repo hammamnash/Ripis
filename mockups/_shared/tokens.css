@@ -1,0 +1,227 @@
+/* ============================================================================
+   Ripis — tokens
+   Transcribed verbatim from .ai/03-design.md §11 ("Tokens — copy-paste"),
+   all three blocks in the order the document requires:
+     1. :root                       — light values + semantic aliases + charts
+     2. :root[data-theme="dark"]    — overrides only
+     3. @theme                      — mirrors the light values for Tailwind
+   In the real app this is one file imported by the Tailwind entry point.
+   A token added to one block must be added to the other two in the same change
+   (§2.9) — a name that resolves in one theme and not the other is a bug.
+   ========================================================================== */
+
+:root {
+  /* Colour */
+  --color-ink: #0c0a08;
+  --color-obsidian: #1a1919;
+  --color-paper: #ffffff;
+  --color-bone: #f4f2f0;
+  --color-ash: #6d6c6b;
+  --color-hairline: #e5e7eb;
+  --color-smoke: #d3d3d3;
+  --color-highlighter: #e4f222;
+  --color-blush: #fbe1d1;
+  --color-sienna: #5d2a1a;
+  --color-brick: #a3351c;
+
+  /* Semantic layer — components use THESE names, never the swatch names above */
+  --color-canvas: #f4f2f0;    /* = bone */
+  --color-surface: #ffffff;   /* = paper */
+  --color-panel: #1a1919;     /* = obsidian */
+  --color-skeleton: #d3d3d3;  /* = smoke */
+
+  /* Chart series (§4) — light set, measured against Paper and Bone */
+  --color-chart-1: #0c0a08;
+  --color-chart-2: #7d8c22;
+  --color-chart-3: #a3351c;
+  --color-chart-4: #6d6c6b;
+  --color-chart-5: #8b8279;
+  --color-chart-6: #5d2a1a;
+
+  /* Money semantics — data surfaces only */
+  --color-positive: #16653f;
+  --color-warning: #a35a00;
+  --color-negative: #a3261c;
+  --wash-positive: #e6f2ea;
+  --wash-warning: #fdf0dd;
+  --wash-negative: #fbe9e7;
+
+  /* Surfaces */
+  --surface-canvas: #f4f2f0;
+  --surface-card: #ffffff;
+  --surface-wash: #f4f2f0;
+  --surface-insight: #fbe1d1;
+  --surface-inverted: #1a1919;
+  --surface-action: #e4f222;
+
+  /* Type */
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: 'Source Serif 4', ui-serif, Georgia, serif;
+  --text-micro: 11px;      --leading-micro: 1.45;
+  --text-caption: 12px;    --leading-caption: 1.45;
+  --text-small: 13px;      --leading-small: 1.45;
+  --text-body: 15px;       --leading-body: 1.5;
+  --text-body-lg: 17px;    --leading-body-lg: 1.4;
+  --text-subheading: 20px; --leading-subheading: 1.3;
+  --text-heading-sm: 24px; --leading-heading-sm: 1.2;
+  --text-heading: 30px;    --leading-heading: 1.15;
+  --text-figure: 44px;     --leading-figure: 1.05;
+  --text-display: 60px;    --leading-display: 1;
+  --tracking-tight: -0.02em;
+  --tracking-tighter: -0.03em;
+  --tracking-micro: 0.02em;
+  --font-weight-regular: 400;
+  --font-weight-w450: 450;
+  --font-weight-medium: 500;
+
+  /* Space */
+  --spacing-unit: 4px;
+  --spacing-4: 4px;   --spacing-8: 8px;   --spacing-12: 12px;
+  --spacing-16: 16px; --spacing-20: 20px; --spacing-24: 24px;
+  --spacing-32: 32px; --spacing-40: 40px; --spacing-48: 48px;
+  --spacing-64: 64px; --spacing-80: 80px;
+  --gutter-mobile: 16px;
+  --gutter-desktop: 24px;
+
+  /* Radii */
+  --radius-tag: 6px;
+  --radius-input: 12px;
+  --radius-card: 16px;
+  --radius-hero: 20px;
+  --radius-pill: 9999px;
+
+  /* Elevation */
+  --shadow-none: none;
+  --shadow-raised: 0 1px 2px rgba(12,10,8,0.06), 0 0 0 1px rgba(12,10,8,0.04);
+  --shadow-overlay: 0 8px 40px rgba(12,10,8,0.14), 0 0 0 1px rgba(12,10,8,0.05);
+
+  /* Motion */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-sheet: 240ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Controls */
+  --control-height: 48px;
+  --target-min: 44px;
+  --tabbar-height: 64px;
+  --fab-size: 56px;
+}
+
+:root[data-theme="dark"] {
+  --color-canvas: #14120f;
+  --color-surface: #1e1b18;
+  --color-panel: #262220;
+  --color-ink: #f4f2f0;
+  --color-ash: #9e9891;
+  --color-hairline: #3a3430;
+  --color-skeleton: #423b36;
+  --color-highlighter: #e4f222;      /* unchanged -- the accent is theme-independent */
+  --color-blush: #3a2018;            /* becomes a surface; peach becomes the ink on it */
+  --color-sienna: #fbe1d1;
+
+  --color-positive: #66d19b;
+  --color-warning: #eab308;
+  --color-negative: #ff9d95;
+  --wash-positive: #16261e;
+  --wash-warning: #2b2412;
+  --wash-negative: #2e1a18;
+  --color-wash-positive: #16261e;   /* Tailwind generates bg-wash-* from the --color- prefixed names */
+  --color-wash-warning: #2b2412;
+  --color-wash-negative: #2e1a18;
+
+  --color-smoke: #423b36;           /* alias of --color-skeleton: one role, and every name must resolve in both themes */
+
+  /* Chart series (§4). The order inverts in dark: prominence means furthest from the canvas */
+  --color-chart-1: #f4f2f0;
+  --color-chart-2: #e4f222;
+  --color-chart-3: #fbe1d1;
+  --color-chart-4: #c9c3bb;
+  --color-chart-5: #bf5a3e;
+  --color-chart-6: #6d6c6b;
+
+  --surface-canvas: #14120f;
+  --surface-card: #1e1b18;
+  --surface-wash: #1a1714;
+  --surface-insight: #3a2018;
+  --surface-inverted: #262220;       /* lighter than canvas: elevation moves away from it */
+  --surface-action: #e4f222;
+}
+
+@theme {
+  /* Chart series (§4) — mirror of the light values in :root; dark values live in :root[data-theme="dark"] */
+  --color-chart-1: #0c0a08;
+  --color-chart-2: #7d8c22;
+  --color-chart-3: #a3351c;
+  --color-chart-4: #6d6c6b;
+  --color-chart-5: #8b8279;
+  --color-chart-6: #5d2a1a;
+
+  --color-ink: #0c0a08;
+  --color-obsidian: #1a1919;
+  --color-paper: #ffffff;
+  --color-bone: #f4f2f0;
+  --color-ash: #6d6c6b;
+  --color-hairline: #e5e7eb;
+  --color-smoke: #d3d3d3;
+  --color-highlighter: #e4f222;
+  --color-blush: #fbe1d1;
+  --color-sienna: #5d2a1a;
+  --color-brick: #a3351c;
+  --color-positive: #16653f;
+  --color-warning: #a35a00;
+  --color-negative: #a3261c;
+  --color-wash-positive: #e6f2ea;
+  --color-wash-warning: #fdf0dd;
+  --color-wash-negative: #fbe9e7;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Source Serif 4', ui-serif, Georgia, serif;
+
+  --text-micro: 11px;
+  --text-caption: 12px;
+  --text-small: 13px;
+  --text-body: 15px;
+  --text-body-lg: 17px;
+  --text-subheading: 20px;
+  --text-heading-sm: 24px;
+  --text-heading: 30px;
+  --text-figure: 44px;
+  --text-display: 60px;
+
+  --radius-tag: 6px;
+  --radius-input: 12px;
+  --radius-card: 16px;
+  --radius-hero: 20px;
+  --radius-pill: 9999px;
+
+  --shadow-raised: 0 1px 2px rgba(12,10,8,0.06), 0 0 0 1px rgba(12,10,8,0.04);
+  --shadow-overlay: 0 8px 40px rgba(12,10,8,0.14), 0 0 0 1px rgba(12,10,8,0.05);
+}
+
+/* ============================================================================
+   MOCKUP LAYER — not in §11. Read mockups/README.md § "Contract gaps" first.
+
+   §5 defines the Net Worth Hero over --surface-inverted and specifies its
+   micro-label as `ash` and its delta line as `positive`/`negative`. That panel
+   is #1a1919 in light, and those three tokens measure 3.35:1 / 2.48:1 / 2.38:1
+   against it — all below the 4.5:1 floor §9 requires. The panel is a DARK
+   surface in both themes, so the correct derivation is the dark set's values,
+   and they clear the floor on BOTH panel values. No new hex is invented here:
+   these are §2.9's existing dark values, given the names the light theme lacks.
+   Verified by node mockups/_checks/contrast.mjs.
+
+     #9e9891  6.14:1 on #1a1919  ·  5.52:1 on #262220
+     #66d19b  9.32:1 on #1a1919  ·  8.38:1 on #262220
+     #ff9d95  8.78:1 on #1a1919  ·  7.89:1 on #262220
+   ========================================================================== */
+:root {
+  --color-ash-on-panel: #9e9891;
+  --color-positive-on-panel: #66d19b;
+  --color-negative-on-panel: #ff9d95;
+
+  /* Text on --surface-action is #0c0a08 in BOTH themes (§2.9 rule 1).
+     `color: var(--color-ink)` on a highlighter fill is a dark-mode bug:
+     in dark --color-ink is bone, which is 1.10:1 on chartreuse. */
+  --color-on-action: #0c0a08;
+}

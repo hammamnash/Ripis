@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ripis — Transaction input (mockup 002)</title>
+<link rel="stylesheet" href="../_shared/tokens.css">
+<link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/primitives.css">
+<link rel="stylesheet" href="../_shared/surfaces.css">
+</head>
+<body>
+<div id="mk"></div>
+
+<div class="phone">
+  <header class="appbar">
+    <div class="appbar__top">
+      <a class="icon-btn" href="../001-transactions-list/index.html" aria-label="Close" id="close"></a>
+      <h1 class="appbar__title heading-sm">New transaction</h1>
+      <span style="width:40px" aria-hidden="true"></span>
+    </div>
+  </header>
+
+  <div class="screen" id="form" style="padding-top:16px"></div>
+</div>
+
+<nav class="tabbar" id="tabbar"></nav>
+
+<script src="../_shared/ledger.js"></script>
+<script src="../_shared/render.js"></script>
+<script src="../_shared/charts.js"></script>
+<script src="../_shared/ui.js"></script>
+<script>
+(function () {
+  'use strict';
+  var R = window.RIPIS, U = window.RIPIS_UI, N = window.RIPIS_RENDER;
+  var SCREENS = [
+    { id: 'list', name: '001 transactions', href: '../001-transactions-list/index.html' },
+    { id: 'input', name: '002 input', href: '../002-transaction-input/index.html' },
+    { id: 'dash', name: '003 dashboard', href: '../003-dashboard/index.html' }
+  ];
+  var TYPES = [
+    { id: 'expense', label: 'Expense' },
+    { id: 'income', label: 'Income' },
+    { id: 'transfer', label: 'Transfer' },
+    { id: 'exchange', label: 'Exchange' }
+  ];
+  var state = {
+    type: 'expense', digits: '', date: R.TODAY, cat: null, error: '',
+    wallet: 'bca', dest: 'cash', destDigits: '', note: '', tags: []
+  };
+
+  function cur() { return R.wallet(state.wallet).currency; }
+  function amount() { return Number(state.digits || 0); }
+  function destAmount() { return Number(state.destDigits || 0); }
+  function isX() { return state.type === 'transfer' || state.type === 'exchange'; }
+
+  /* Digit-grouped typing: Indonesian grouping (. for thousands) is applied as
+     the user types, and the caret is restored by counting digits, not chars. */
+  function group(spaced) {
+    var d = String(spaced).replace(/\D/g, '');
+    return { digits: d, text: d.replace(/\B(?=(\d{3})+(?!\d))/g, '.') };
+  }
+
+  function catOptions() {
+    var want = state.type === 'income' ? 'income' : 'expense';
+    return R.CATEGORIES.filter(function (c) { return c.type === want; }).map(function (c) {
+      return { value: c.id, label: c.name, colour: 'var(--color-chart-' + c.c + ')' };
+    });
+  }
+  function walletOptions() {
+    return R.WALLETS.map(function (w) {
+      return { value: w.id, label: w.name, meta: w.is_liability ? 'Liability \u00b7 ' + w.currency : w.currency };
+    });
+  }
+  function pickerBtn(id, valueHTML, hint) {
+    return '<button class="picker" type="button" id="' + id + '">' +
+      '<span class="picker__value">' + valueHTML + '</span>' +
+      (hint ? '<span class="picker__meta">' + hint + '</span>' : '') +
+      '<span class="picker__chev">' + window.RIPIS_ICON('right', 18) + '</span></button>';
+  }
+  var SUGGESTED = ['work', 'family', 'car', 'tax', 'insurance'];
+
+  function formHTML() {
+    var w = R.wallet(state.wallet), d = R.wallet(state.dest);
+    var h = [];
+    h.push('<div class="segmented" role="tablist">' + TYPES.map(function (t) {
+      return '<button class="segmented__opt" type="button" role="tab" data-type="' + t.id +
+        '" aria-selected="' + (t.id === state.type) + '">' + t.label + '</button>';
+    }).join('') + '</div>');
+
+    h.push('<div class="field"><label class="field__label" for="amt">Amount</label>' +
+      '<div class="amountfield"><span class="amountfield__code">' + w.currency + '</span>' +
+      '<input class="amountfield__input" id="amt" inputmode="numeric" autocomplete="off" ' +
+        'placeholder="0" aria-label="Amount" value="' + group(state.digits).text + '"></div>' +
+      (state.efield === 'amt' ? '<p class="field__error">' + window.RIPIS_ICON('alert', 14) +
+        N.esc(state.error) + '</p>' :
+        '<p class="field__hint">' + (state.type === 'income' ? 'Money in. Counts toward income totals.'
+          : state.type === 'expense' ? 'Money out. Counts toward expense totals.'
+          : 'Moved between your own wallets \u2014 neither income nor expense (FR-05).') + '</p>') +
+      '</div>');
+
+    h.push('<div class="field"><span class="field__label">Date</span>' +
+      pickerBtn('pick-date', '<span class="tabular">' + R.formatDate(state.date) + '</span>') +
+      '<p class="field__hint">A calendar day, not a timestamp (ADR-0007).</p></div>');
+
+    if (!isX()) {
+      var c = state.cat ? R.category(state.cat) : null;
+      h.push('<div class="field"><span class="field__label">Category</span>' +
+        pickerBtn('pick-cat',
+          (c ? '<span class="picker__dot" style="background:var(--color-chart-' + c.c + ')"></span>' : '') +
+          (c ? c.name : '<span class="ash">Choose a category</span>')) +
+        (state.efield === 'cat' ? '<p class="field__error">' + window.RIPIS_ICON('alert', 14) +
+          N.esc(state.error) + '</p>' :
+          '<p class="field__hint">Required \u2014 an expense with no category is refused (FR-04).</p>') +
+        '</div>');
+    }
+
+    h.push('<div class="field"><span class="field__label">' + (isX() ? 'From wallet' : 'Wallet') +
+      '</span>' + pickerBtn('pick-wallet', w.name,
+        (w.is_liability ? 'Liability \u00b7 ' : '') + w.currency) + '</div>');
+
+    if (isX()) {
+      h.push('<div class="field"><span class="field__label">To wallet</span>' +
+        pickerBtn('pick-dest', d.name, (d.is_liability ? 'Liability \u00b7 ' : '') + d.currency) + '</div>');
+      if (state.type === 'exchange') {
+        h.push('<div class="field"><label class="field__label" for="damt">Amount received</label>' +
+          '<div class="amountfield"><span class="amountfield__code">' + d.currency + '</span>' +
+          '<input class="amountfield__input" id="damt" inputmode="numeric" autocomplete="off" ' +
+            'placeholder="0" aria-label="Amount received" value="' + group(state.destDigits).text +
+            '"></div>' +
+          '<p class="field__hint" data-rate>' + rateHint() + '</p></div>');
+      }
+    }
+
+    h.push('<div class="field"><label class="field__label" for="note">Note</label>' +
+      '<input class="input" id="note" maxlength="80" placeholder="What was this for?" ' +
+        'value="' + N.esc(state.note) + '"></div>');
+
+    h.push('<div class="field"><span class="field__label">Tags</span>' +
+      '<div class="chiprow" style="margin:0;padding:0">' + SUGGESTED.map(function (t) {
+        return '<button class="chip" type="button" data-tag="' + t + '" aria-pressed="' +
+          (state.tags.indexOf(t) > -1) + '">' + t + '</button>';
+      }).join('') + '</div></div>');
+
+    h.push('<div class="btn-row">' +
+      '<a class="pill pill--ghost pill--block" href="../001-transactions-list/index.html">Cancel</a>' +
+      '<button class="pill pill--highlighter pill--block" type="button" id="save">Save</button></div>' +
+      '<p class="field__hint" style="text-align:center">The mockup keeps this in sessionStorage so ' +
+        '001 shows it. Nothing is sent anywhere.</p>');
+    return h.join('');
+  }
+
+  function rateHint() {
+    if (!(amount() > 0 && destAmount() > 0)) {
+      return 'Both amounts, so the implied rate can be shown \u2014 it is never stored (ADR-0004).';
+    }
+    var a = amount(), b = destAmount();
+    var from = cur(), to = R.wallet(state.dest).currency;
+    return 'Implied rate 1 ' + from + ' = ' + R.formatNumber(b / a, 4) + ' ' + to + '  \u00b7  1 ' +
+      to + ' = ' + R.formatNumber(a / b, 4) + ' ' + from + ' \u2014 derived for display only.';
+  }
+
+  function each(sel, fn) {
+    Array.prototype.forEach.call(document.querySelectorAll(sel), fn);
+  }
+
+  function validate() {
+    if (!(amount() > 0)) { return { f: 'amt', m: 'Enter an amount above zero.' }; }
+    if (!isX() && !state.cat) {
+      return { f: 'cat', m: 'Choose a category \u2014 an expense with none is refused (FR-04).' };
+    }
+    if (isX() && state.dest === state.wallet) { return { f: 'wallet', m: 'Pick two different wallets.' }; }
+    if (state.type === 'exchange' && !(destAmount() > 0)) {
+      return { f: 'amt', m: 'Enter the amount received, so the implied rate can be derived.' };
+    }
+    if (state.type === 'transfer' && cur() !== R.wallet(state.dest).currency) {
+      return { f: 'wallet', m: 'A same-currency move is a Transfer; a cross-currency one is an Exchange.' };
+    }
+    return null;
+  }
+
+  function nowHM() {
+    var d = new Date();
+    return (d.getHours() < 10 ? '0' : '') + d.getHours() + ':' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes();
+  }
+
+  function save() {
+    var err = validate();
+    if (err) {
+      state.efield = err.f; state.error = err.m;
+      render();
+      return;
+    }
+    var t = {
+      id: 'n' + Date.now(), type: state.type, date: state.date, wallet: state.wallet,
+      amount: amount(), cur: cur(), note: state.note || '(no note)',
+      tags: state.tags.slice(), recorded: R.TODAY + 'T' + nowHM() + ':00'
+    };
+    if (isX()) {
+      t.dest = state.dest;
+      t.dest_amount = state.type === 'exchange' ? destAmount() : amount();
+    } else {
+      t.cat = state.cat;
+    }
+    if (cur() !== R.PRIMARY) { t.base = Math.round(amount() * (R.RATE[cur()] || 1)); }
+    U.saveAdded(t);
+    U.toast('Saved \u2014 ' + R.monthLabel(state.date.slice(0, 7)) +
+      ' will show it at the top, and the totals follow.');
+    setTimeout(function () {
+      location.href = '../001-transactions-list/index.html?theme=' + U.readTheme();
+    }, 800);
+  }
+
+  function bind() {
+    each('[data-type]', function (b) {
+      b.addEventListener('click', function () {
+        state.type = b.getAttribute('data-type');
+        if (isX()) {
+          state.cat = null;
+          /* An exchange needs two currencies to be an exchange: if the current
+             pair is same-currency, move the destination to a foreign wallet. */
+          if (R.wallet(state.dest).currency === cur()) {
+            var alt = R.WALLETS.filter(function (w) { return w.currency !== cur(); })[0];
+            if (alt) { state.dest = alt.id; }
+          }
+        }
+        state.efield = ''; state.error = '';
+        render();
+      });
+    });
+    var amt = document.getElementById('amt');
+    amt.addEventListener('input', function () {
+      var caret = amt.selectionStart;
+      var before = amt.value.slice(0, caret).replace(/\D/g, '').length;
+      var g = group(amt.value);
+      state.digits = g.digits;
+      amt.value = g.text;
+      var pos = 0, seen = 0;
+      while (pos < amt.value.length && seen < before) {
+        if (/\d/.test(amt.value.charAt(pos))) { seen++; }
+        pos++;
+      }
+      amt.setSelectionRange(pos, pos);
+      var hint = document.querySelector('[data-rate]');
+      if (hint) { hint.textContent = rateHint(); }
+    });
+    var damt = document.getElementById('damt');
+    if (damt) {
+      damt.addEventListener('input', function () {
+        var g = group(damt.value);
+        state.destDigits = g.digits;
+        damt.value = g.text;
+        var hint = document.querySelector('[data-rate]');
+        if (hint) { hint.textContent = rateHint(); }
+      });
+    }
+    document.getElementById('note').addEventListener('input', function () {
+      state.note = this.value;
+    });
+    document.getElementById('pick-date').addEventListener('click', function () {
+      U.datePicker({
+        title: 'Date', value: state.date, ym: state.date.slice(0, 7),
+        onPick: function (d) { state.date = d; render(); }
+      });
+    });
+    var pc = document.getElementById('pick-cat');
+    if (pc) {
+      pc.addEventListener('click', function () {
+        U.picker({
+          title: 'Category', options: catOptions(), value: state.cat, search: true,
+          searchHint: 'Search categories',
+          onPick: function (v) { state.cat = v; state.efield = ''; render(); }
+        });
+      });
+    }
+    document.getElementById('pick-wallet').addEventListener('click', function () {
+      U.picker({
+        title: isX() ? 'From wallet' : 'Wallet', options: walletOptions(), value: state.wallet,
+        onPick: function (v) { state.wallet = v; render(); }
+      });
+    });
+    var pd = document.getElementById('pick-dest');
+    if (pd) {
+      pd.addEventListener('click', function () {
+        U.picker({
+          title: 'To wallet', options: walletOptions(), value: state.dest,
+          onPick: function (v) { state.dest = v; render(); }
+        });
+      });
+    }
+    each('[data-tag]', function (b) {
+      b.addEventListener('click', function () {
+        var t = b.getAttribute('data-tag');
+        var i = state.tags.indexOf(t);
+        if (i > -1) { state.tags.splice(i, 1); } else { state.tags.push(t); }
+        b.setAttribute('aria-pressed', String(i < 0));
+      });
+    });
+    document.getElementById('save').addEventListener('click', save);
+  }
+
+  function render() {
+    document.getElementById('form').innerHTML = formHTML();
+    bind();
+  }
+
+  document.getElementById('mk').innerHTML = U.mkbar('input', SCREENS);
+  document.getElementById('tabbar').innerHTML = U.tabbar('transactions');
+  document.getElementById('close').innerHTML = window.RIPIS_ICON('x');
+  U.bindMissing(document.getElementById('tabbar'));
+  render();
+  U.applyTheme();
+})();
+</script>
+</body>
+</html>

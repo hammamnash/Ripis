@@ -1,0 +1,287 @@
+/* ============================================================================
+   Ripis — data surfaces (§5): transaction row, amount display, net-worth hero,
+   month summary band, wallet card, budget bar, chart card, insight card,
+   empty state, skeleton.
+   ========================================================================== */
+
+/* --- Amount Display (§5) -------------------------------------------------
+   Currency mark: §8 fixes the rendered shape as `Rp 1.250.000` — mark, space,
+   figure. Where an amount also needs its ISO code disambiguated the code takes
+   --text-caption and sits "twice as far from the digit as a word space".
+   Rounding follows the currency's minor_unit: IDR and VND 0, USD 2. Never .00
+   on IDR (ADR-0003).
+   ------------------------------------------------------------------------ */
+.amount { display: inline-flex; align-items: baseline; gap: 0.28em; font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1, "ss01" 1; white-space: nowrap; }
+.amount__mark { font-weight: inherit; }
+.amount__figure { font-weight: inherit; }
+.amount__code { font-size: var(--text-caption); color: var(--color-ash); margin-left: 0.5em; letter-spacing: 0; }
+.amount--income { color: var(--color-positive); }
+.amount--expense { color: var(--color-ink); }
+.amount--transfer { color: var(--color-ash); }
+.amount--negative { color: var(--color-negative); }   /* status, on a balance — not on a plain expense */
+
+/* --- Transaction Row (§5) — 64px, hairline, full-bleed to the gutter, no card */
+.txnlist { display: flex; flex-direction: column; }
+.txn {
+  position: relative;
+  overflow: hidden;
+  margin: 0 calc(var(--gutter-mobile) * -1);
+}
+@media (min-width: 768px) { .txn { margin: 0 calc(var(--gutter-desktop) * -1); } }
+
+.txn__actions {
+  position: absolute; top: 0; right: 0; bottom: 0;
+  display: flex; align-items: stretch;
+}
+.txn__action {
+  width: 72px;                       /* §6 — swipe exposes a 72px reveal panel */
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  font-size: var(--text-caption);
+  background: var(--surface-wash);
+  color: var(--color-ink);
+}
+.txn__action:hover { background: var(--color-hairline); }
+.txn__action--delete { background: var(--wash-negative); color: var(--color-negative); }
+.txn__action svg { width: 18px; height: 18px; }
+
+.txn__body {
+  position: relative;
+  display: flex; align-items: center; gap: var(--spacing-12);
+  min-height: 64px;
+  padding: var(--spacing-8) var(--gutter-mobile);
+  background: var(--color-canvas);
+  border-bottom: 1px solid var(--color-hairline);
+  transition: transform var(--duration-base) var(--ease-out), background-color var(--duration-fast) var(--ease-out);
+  touch-action: pan-y;
+}
+@media (min-width: 768px) { .txn__body { padding-left: var(--gutter-desktop); padding-right: var(--gutter-desktop); } }
+.txn__body:hover { background: var(--surface-card); }
+.txn[data-swiped="true"] .txn__body { transform: translateX(-144px); }
+.txn__icon {
+  width: 36px; height: 36px; flex: none;
+  border-radius: var(--radius-pill);
+  background: var(--surface-wash);
+  display: grid; place-items: center;
+  color: var(--color-ink);
+}
+.txn__icon svg { width: 18px; height: 18px; }
+.txn__main { flex: 1; min-width: 0; }
+.txn__note { display: block; font-size: var(--text-body-lg); line-height: var(--leading-body-lg); color: var(--color-ink); }
+.txn__meta { display: block; font-size: var(--text-caption); line-height: var(--leading-caption); color: var(--color-ash); }
+.txn__amt { font-size: var(--text-body-lg); font-weight: var(--font-weight-w450); text-align: right; flex: none; }
+.txn__amt .amount { justify-content: flex-end; }
+.txn__amt-sub { display: block; font-size: var(--text-caption); color: var(--color-ash); text-align: right; }
+.txn__tag {
+  display: inline-block; margin-left: 6px;
+  font-size: var(--text-micro); letter-spacing: var(--tracking-micro); text-transform: uppercase;
+  color: var(--color-ash);
+  border: 1px solid var(--color-hairline); border-radius: var(--radius-tag);
+  padding: 1px 4px;
+}
+
+/* --- Context menu (long-press) ------------------------------------------- */
+.ctxmenu {
+  position: fixed; z-index: 65;
+  background: var(--surface-card);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-overlay);
+  padding: var(--spacing-8);
+  min-width: 200px;
+  opacity: 0; visibility: hidden;
+  transition: opacity var(--duration-fast) var(--ease-out), visibility var(--duration-fast);
+}
+.ctxmenu[data-open="true"] { opacity: 1; visibility: visible; }
+.ctxmenu__item {
+  display: flex; align-items: center; gap: var(--spacing-8);
+  width: 100%; text-align: left;
+  min-height: var(--target-min);
+  padding: 0 var(--spacing-8);
+  border-radius: var(--radius-tag);
+  font-size: var(--text-body);
+}
+.ctxmenu__item:hover { background: var(--surface-wash); }
+.ctxmenu__item--destructive { color: var(--color-negative); }
+.ctxmenu__item svg { width: 16px; height: 16px; }
+
+/* --- Net Worth Hero (§5, signature component) -----------------------------
+   Full-bleed --surface-inverted, radius 20, padding 24. §2.9 rule 3: darker
+   than the canvas in light, lighter in dark — so the component is written
+   against the token, never the hex.
+   ------------------------------------------------------------------------ */
+.hero {
+  background: var(--surface-inverted);
+  border-radius: var(--radius-hero);
+  padding: var(--spacing-24);
+  color: var(--color-paper);
+  margin: 0 calc(var(--gutter-mobile) * -1);
+  display: flex; flex-direction: column; gap: var(--spacing-12);
+}
+@media (min-width: 768px) { .hero { margin: 0 calc(var(--gutter-desktop) * -1); } }
+.hero__label {
+  font-size: var(--text-micro); line-height: var(--leading-micro);
+  letter-spacing: var(--tracking-micro); text-transform: uppercase;
+  color: var(--color-ash-on-panel);        /* mockup layer — see tokens.css */
+}
+.hero__figure {
+  font-family: var(--font-serif);
+  font-size: var(--text-display); line-height: var(--leading-display);
+  letter-spacing: var(--tracking-tighter);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-paper);
+  margin: 0;
+}
+.hero__delta { font-size: var(--text-small); line-height: var(--leading-small); display: flex; align-items: center; gap: 4px; }
+.hero__delta--up { color: var(--color-positive-on-panel); }
+.hero__delta--down { color: var(--color-negative-on-panel); }
+.hero__delta .amount { font-size: inherit; }
+.hero__split {
+  display: grid; grid-template-columns: 1fr 1fr;
+  margin-top: var(--spacing-8);
+  border-top: 1px solid var(--color-ash-on-panel);   /* the panel's hairline: no light-set border token reads here */
+  padding-top: var(--spacing-12);
+}
+.hero__split > * + * { border-left: 1px solid var(--color-ash-on-panel); padding-left: var(--spacing-16); }
+.hero__stat-label {
+  font-size: var(--text-micro); letter-spacing: var(--tracking-micro); text-transform: uppercase;
+  color: var(--color-ash-on-panel);
+}
+.hero__stat-value { font-size: var(--text-subheading); font-weight: var(--font-weight-w450); font-variant-numeric: tabular-nums; margin-top: 2px; }
+.hero__note { font-size: var(--text-caption); line-height: var(--leading-caption); color: var(--color-ash-on-panel); }
+
+/* --- Month summary band (§2.2) — the panel's second sanctioned use -------- */
+.band {
+  background: var(--surface-inverted);
+  border-radius: var(--radius-hero);
+  padding: var(--spacing-20) var(--spacing-24);
+  color: var(--color-paper);
+  margin: 0 calc(var(--gutter-mobile) * -1);
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--spacing-12);
+}
+@media (min-width: 768px) { .band { margin: 0 calc(var(--gutter-desktop) * -1); } }
+.band__cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.band__cell + .band__cell { border-left: 1px solid var(--color-ash-on-panel); padding-left: var(--spacing-12); }
+.band__label { font-size: var(--text-micro); letter-spacing: var(--tracking-micro); text-transform: uppercase; color: var(--color-ash-on-panel); }
+.band__value { font-size: var(--text-body-lg); font-weight: var(--font-weight-w450); font-variant-numeric: tabular-nums; }
+.band__value--in { color: var(--color-positive-on-panel); }
+.band__value--out { color: var(--color-paper); }
+
+/* --- Wallet Card (§5) ---------------------------------------------------- */
+.walletgrid { display: flex; flex-direction: column; gap: var(--spacing-12); }
+.wallet {
+  background: var(--surface-card);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-card);
+  padding: var(--spacing-20);
+  display: flex; align-items: center; gap: var(--spacing-16);
+  width: 100%; text-align: left;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+.wallet:hover { border-color: var(--color-ash); }
+.wallet__main { flex: 1; min-width: 0; }
+.wallet__name { display: block; font-size: var(--text-body-lg); font-weight: var(--font-weight-w450); }
+.wallet__type { display: block; font-size: var(--text-caption); color: var(--color-ash); }
+.wallet__side { text-align: right; flex: none; }
+.wallet__balance { font-size: var(--text-subheading); font-weight: var(--font-weight-w450); font-variant-numeric: tabular-nums; }
+.wallet__balance--liability { color: var(--color-negative); }   /* no sign, no minus — ADR-0025 */
+.wallet__badge {
+  display: inline-block; margin-top: 2px;
+  font-size: var(--text-micro); letter-spacing: var(--tracking-micro); text-transform: uppercase;
+  color: var(--color-ash);
+}
+.wallet__badge--liability { color: var(--color-negative); }
+
+/* --- Budget Bar (§5, FR-10) ---------------------------------------------- */
+.budgetlist { display: flex; flex-direction: column; gap: var(--spacing-20); }
+.budget__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--spacing-12); margin-bottom: 6px; }
+.budget__label { font-size: var(--text-caption); line-height: var(--leading-caption); color: var(--color-ash); }
+.budget__pct { font-size: var(--text-caption); font-variant-numeric: tabular-nums; font-weight: var(--font-weight-w450); }
+.budget__track { height: 8px; border-radius: var(--radius-pill); background: var(--surface-wash); overflow: hidden; }
+.budget__fill { height: 100%; border-radius: var(--radius-pill); transition: width var(--duration-sheet) var(--ease-out); }
+.budget__fill--positive { background: var(--color-positive); }
+.budget__fill--warning  { background: var(--color-warning); }
+.budget__fill--negative { background: var(--color-negative); }
+.budget__pct--positive { color: var(--color-positive); }
+.budget__pct--warning  { color: var(--color-warning); }
+.budget__pct--negative { color: var(--color-negative); }
+
+/* --- Chart Card (§5) ----------------------------------------------------- */
+.card {
+  background: var(--surface-card);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-card);
+  padding: var(--spacing-20);
+}
+.chartcard__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--spacing-12); margin-bottom: var(--spacing-16); }
+.chartcard__title { margin: 0; font-size: var(--text-subheading); line-height: var(--leading-subheading); letter-spacing: -0.01em; font-weight: var(--font-weight-regular); }
+.chartcard__link { font-size: var(--text-body); color: var(--color-ink); }
+.chartcard__link:hover { background: var(--surface-wash); box-shadow: 0 0 0 4px var(--surface-wash); }
+.chartcard__note { font-size: var(--text-caption); color: var(--color-ash); margin-top: var(--spacing-12); }
+.chart svg { width: 100%; height: auto; }
+/* Chart text: direct labels in ink, period ticks in ash. No axes, no gridlines
+   (§4) — these are labels attached to the data, not a scale. */
+.ch__val {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: var(--font-weight-w450);
+  font-variant-numeric: tabular-nums;
+  fill: var(--color-ink);
+}
+.ch__tick {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  letter-spacing: var(--tracking-micro);
+  text-transform: uppercase;
+  fill: var(--color-ash);
+}
+.catpie__svg { display: block; width: 190px; height: 190px; margin: 0 auto; }
+.catpie__hole { fill: var(--color-ash); font-size: 11px; letter-spacing: var(--tracking-micro); text-transform: uppercase; }
+.catpie__total { text-align: center; color: var(--color-ash); margin: var(--spacing-12) 0 0; }
+
+/* Category chart — donut + a directly labelled list. The list carries the
+   values and the names, so it is the §9 text alternative as well as the
+   direct labelling §4 requires for the 1↔6 and 3↔4 pairs. */
+.catrows { display: flex; flex-direction: column; gap: var(--spacing-8); margin-top: var(--spacing-16); }
+.catrow { display: flex; align-items: center; gap: var(--spacing-8); font-size: var(--text-small); }
+.catrow__dot { width: 8px; height: 8px; border-radius: var(--radius-pill); flex: none; }
+.catrow__name { flex: 1; min-width: 0; }
+.catrow__amt { font-variant-numeric: tabular-nums; }
+.catrow__pct { color: var(--color-ash); font-variant-numeric: tabular-nums; width: 44px; text-align: right; }
+
+/* --- Insight Card (§5) — one per screen, maximum --------------------------
+   --surface-insight and --color-sienna swap roles by token: light is sienna
+   ink on blush, dark is peach ink on #3a2018 (§2.9 rule 2). No branch needed. */
+.insight {
+  background: var(--surface-insight);
+  color: var(--color-sienna);
+  border-radius: var(--radius-card);
+  padding: var(--spacing-20);
+  display: flex; gap: var(--spacing-12); align-items: flex-start;
+}
+.insight svg { width: 18px; height: 18px; flex: none; margin-top: 2px; }
+.insight__body { font-size: var(--text-body); line-height: var(--leading-body); }
+.insight__link { text-decoration: underline; text-underline-offset: 2px; font-weight: var(--font-weight-w450); }
+
+/* --- Empty State (§5) --------------------------------------------------- */
+.empty {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: var(--spacing-12);
+  padding: var(--spacing-24);
+  max-width: 320px; margin: 0 auto;
+}
+.empty svg { width: 48px; height: 48px; color: var(--color-ash); stroke-width: 1; }
+.empty__title { font-size: var(--text-subheading); line-height: var(--leading-subheading); }
+.empty__body { font-size: var(--text-body); color: var(--color-ash); }
+
+/* --- Skeleton — smoke at 40% on wash, plain pulse, no shimmer (§5) ------- */
+.skel { background: var(--color-skeleton); opacity: 0.4; border-radius: var(--radius-input); animation: skelpulse var(--duration-base) ease-in-out infinite alternate; }
+.skel--row { height: 64px; border-radius: 0; }
+.skel--card { height: 96px; border-radius: var(--radius-card); }
+@keyframes skelpulse { from { opacity: 0.25; } to { opacity: 0.5; } }
+
+/* --- Detail / meta rows (transaction detail, §7 screen 3) ---------------- */
+.metarow { display: flex; align-items: baseline; justify-content: space-between; gap: var(--spacing-16); padding: var(--spacing-12) 0; border-bottom: 1px solid var(--color-hairline); }
+.metarow:last-child { border-bottom: 0; }
+.metarow__k { font-size: var(--text-micro); letter-spacing: var(--tracking-micro); text-transform: uppercase; color: var(--color-ash); }
+.metarow__v { font-size: var(--text-body); text-align: right; }
+.auditline { font-size: var(--text-caption); color: var(--color-ash); }

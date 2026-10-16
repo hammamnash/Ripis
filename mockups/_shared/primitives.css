@@ -1,0 +1,294 @@
+/* ============================================================================
+   Ripis — primitives (§5): pill buttons, icon button, chip, segmented control,
+   form fields, bottom sheet, toast.
+   ========================================================================== */
+
+/* --- Pill Button ---------------------------------------------------------- */
+.pill {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--spacing-8);
+  height: var(--control-height);
+  padding: 0 var(--spacing-24);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-body-lg);
+  font-weight: var(--font-weight-regular);
+  white-space: nowrap;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+.pill svg { width: 20px; height: 20px; }
+
+/* Primary — ink fill, Paper text, no border. §5 */
+.pill--primary { background: var(--color-ink); color: var(--color-paper); }
+.pill--primary:hover { background: var(--color-obsidian); }
+
+/* Highlighter — ONE PER SCREEN, MAXIMUM. §5 */
+.pill--highlighter {
+  background: var(--surface-action);
+  /* §2.9 rule 1: text on the accent is #0c0a08 in BOTH themes.
+     `var(--color-ink)` here is the bug the rule exists to prevent. */
+  color: var(--color-on-action);
+}
+.pill--highlighter:hover { background: #d6e51f; }
+
+/* Ghost — transparent, 1px ink border, pairs on the same row as a primary. */
+.pill--ghost { background: transparent; border: 1px solid var(--color-ink); color: var(--color-ink); }
+.pill--ghost:hover { background: var(--surface-wash); }
+
+/* Tertiary / link — no fill, no border. Destructive is never a coloured button. */
+.pill--tertiary { height: auto; padding: 0; background: none; color: var(--color-ink); }
+.pill--tertiary:hover { background: var(--surface-wash); box-shadow: 0 0 0 6px var(--surface-wash); }
+.pill--destructive { color: var(--color-negative); }
+.pill--destructive:hover { background: var(--wash-negative); box-shadow: 0 0 0 6px var(--wash-negative); }
+
+.pill--block { display: flex; width: 100%; }
+.btn-row { display: flex; gap: var(--spacing-12); }
+
+/* --- Icon Button — 40px circle, wash fill, ink icon, no border. §5 -------- */
+.icon-btn {
+  width: 40px; height: 40px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-wash);
+  color: var(--color-ink);
+  display: grid; place-items: center;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+.icon-btn:hover { background: var(--color-hairline); }
+.icon-btn svg { width: 20px; height: 20px; }
+
+/* --- Category Chip — radius 6, wash fill, ash text, optional 8px dot. §5 -- */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: var(--radius-tag);
+  padding: 6px 10px;
+  background: var(--surface-wash);
+  color: var(--color-ash);
+  font-size: var(--text-small);
+  line-height: var(--leading-small);
+  border: 1px solid transparent;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+.chip:hover { border-color: var(--color-hairline); }
+.chip__dot { width: 8px; height: 8px; border-radius: var(--radius-pill); flex: none; }
+.chip[aria-pressed="true"] { background: var(--color-ink); color: var(--color-paper); }
+.chip__count { color: inherit; opacity: 0.75; }
+
+/* --- Filter chip row on the transactions list ----------------------------- */
+.chiprow {
+  display: flex; gap: var(--spacing-8);
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: var(--spacing-4) 0 var(--spacing-8);
+  margin: 0 calc(var(--gutter-mobile) * -1);
+  padding-left: var(--gutter-mobile); padding-right: var(--gutter-mobile);
+}
+.chiprow::-webkit-scrollbar { display: none; }
+
+/* --- Segmented Control — wash track, Paper thumb, never the highlighter ---- */
+.segmented {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  gap: var(--spacing-4);
+  padding: var(--spacing-4);
+  height: var(--target-min);
+  border-radius: var(--radius-input);
+  background: var(--surface-wash);
+}
+.segmented__opt {
+  display: grid; place-items: center;
+  border-radius: 9px;               /* 12 - 4px padding, so the thumb's radius reads as 12 */
+  font-size: var(--text-body);
+  font-weight: var(--font-weight-w450);
+  color: var(--color-ash);
+  border: 1px solid transparent;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              color var(--duration-fast) var(--ease-out);
+}
+.segmented__opt:hover { color: var(--color-ink); }
+.segmented__opt[aria-selected="true"] {
+  background: var(--surface-card);
+  border-color: var(--color-hairline);
+  color: var(--color-ink);
+}
+
+/* --- Form Fields (§5) ---------------------------------------------------- */
+.field { display: flex; flex-direction: column; }
+.field__label {
+  font-size: var(--text-micro); line-height: var(--leading-micro);
+  letter-spacing: var(--tracking-micro); text-transform: uppercase;
+  color: var(--color-ash);
+  margin-bottom: 6px;                /* "6px below it the control" */
+}
+.input {
+  height: var(--control-height);
+  border-radius: var(--radius-input);
+  background: var(--surface-card);
+  border: 1px solid var(--color-hairline);
+  padding: 0 14px;
+  font-size: var(--text-body-lg);
+  color: var(--color-ink);
+  width: 100%;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+.input::placeholder { color: var(--color-ash); }
+.input:focus { outline: none; border-color: var(--color-ink); box-shadow: 0 0 0 2px var(--color-highlighter); }
+.input--error { border-color: var(--color-negative); }
+.field__error {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 6px;
+  font-size: var(--text-caption); line-height: var(--leading-caption);
+  color: var(--color-negative);
+}
+.field__error svg { width: 14px; height: 14px; flex: none; }
+.field__hint { margin-top: 6px; font-size: var(--text-caption); color: var(--color-ash); }
+
+/* Amount field — "should feel like a calculator, not a form" */
+.amountfield {
+  display: flex; align-items: center; gap: var(--spacing-12);
+  height: 72px;
+  padding: 0 14px;
+  border-radius: var(--radius-input);
+  background: var(--surface-card);
+  border: 1px solid var(--color-hairline);
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+.amountfield:focus-within { border-color: var(--color-ink); box-shadow: 0 0 0 2px var(--color-highlighter); }
+.amountfield__code {
+  font-size: var(--text-body-lg); font-weight: var(--font-weight-w450);
+  color: var(--color-ash); flex: none;
+  padding-right: var(--spacing-12);
+  border-right: 1px solid var(--color-hairline);
+}
+.amountfield__input {
+  flex: 1; min-width: 0;
+  border: 0; background: none; outline: none;
+  font-family: var(--font-sans);
+  font-size: 30px;                    /* §5 names 30px for the amount field */
+  font-weight: var(--font-weight-regular);
+  letter-spacing: var(--tracking-tight);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+}
+.amountfield__input::placeholder { color: var(--color-smoke); }
+
+/* Picker rows — the value that opens a Bottom Sheet, not a native <select> */
+.picker {
+  display: flex; align-items: center; gap: var(--spacing-12);
+  height: var(--control-height);
+  padding: 0 14px;
+  border-radius: var(--radius-input);
+  background: var(--surface-card);
+  border: 1px solid var(--color-hairline);
+  width: 100%;
+  text-align: left;
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+.picker:hover { border-color: var(--color-ash); }
+.picker__value { flex: 1; font-size: var(--text-body-lg); }
+.picker__meta { font-size: var(--text-caption); color: var(--color-ash); }
+.picker__chev { width: 18px; height: 18px; color: var(--color-ash); flex: none; }
+.picker__dot { width: 10px; height: 10px; border-radius: var(--radius-pill); flex: none; }
+
+/* --- Bottom Sheet — radius 20 20 0 0, overlay shadow, 240ms (§5, §2.7) ---- */
+.scrim {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(12, 10, 8, 0.4);
+  opacity: 0; visibility: hidden;
+  transition: opacity var(--duration-base) var(--ease-out), visibility var(--duration-base);
+}
+.scrim[data-open="true"] { opacity: 1; visibility: visible; }
+
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  z-index: 60;
+  max-width: 430px; margin: 0 auto;
+  background: var(--surface-card);
+  border-radius: var(--radius-hero) var(--radius-hero) 0 0;
+  box-shadow: var(--shadow-overlay);
+  padding: var(--spacing-24) var(--spacing-24) calc(var(--spacing-24) + env(safe-area-inset-bottom, 0px));
+  max-height: 80vh; overflow-y: auto;
+  transform: translateY(101%);
+  transition: transform var(--duration-sheet) var(--ease-out);
+}
+.sheet[data-open="true"] { transform: translateY(0); }
+.sheet__handle {
+  width: 36px; height: 4px; border-radius: var(--radius-pill);
+  background: var(--color-smoke);
+  margin: -12px auto var(--spacing-16);   /* centred, 12px from the sheet's top edge */
+}
+.sheet__title { margin: 0 0 var(--spacing-16); font-size: var(--text-heading-sm); line-height: var(--leading-heading-sm); letter-spacing: -0.015em; font-weight: var(--font-weight-regular); }
+.sheet__search { margin-bottom: var(--spacing-12); }
+.sheet__list { display: flex; flex-direction: column; }
+.sheet__group-label {
+  font-size: var(--text-micro); letter-spacing: var(--tracking-micro); text-transform: uppercase;
+  color: var(--color-ash); padding: var(--spacing-16) 0 var(--spacing-8);
+}
+.sheet__opt {
+  display: flex; align-items: center; gap: var(--spacing-12);
+  min-height: var(--target-min);
+  padding: var(--spacing-8) 0;
+  border-bottom: 1px solid var(--color-hairline);
+  width: 100%; text-align: left;
+}
+.sheet__opt:last-child { border-bottom: 0; }
+.sheet__opt:hover { background: var(--surface-wash); }
+.sheet__opt[aria-selected="true"] .sheet__opt-name { font-weight: var(--font-weight-w450); }
+.sheet__opt-name { flex: 1; font-size: var(--text-body-lg); }
+.sheet__opt-meta { font-size: var(--text-caption); color: var(--color-ash); text-align: right; }
+.sheet__check { width: 18px; height: 18px; flex: none; color: var(--color-ink); }
+.sheet__row { display: flex; gap: var(--spacing-12); }
+.sheet__row .pill { flex: 1; }
+
+/* Date grid inside the date sheet — dd/mm/yyyy is the format (§8), so the
+   mockup does not hand the field to a native picker whose format follows the
+   browser locale instead of ADR-0026. */
+.dategrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: var(--spacing-4); }
+.dategrid__dow {
+  text-align: center; font-size: var(--text-micro); letter-spacing: var(--tracking-micro);
+  text-transform: uppercase; color: var(--color-ash); padding-bottom: var(--spacing-4);
+}
+.dategrid__day {
+  height: 40px; border-radius: var(--radius-input);
+  display: grid; place-items: center;
+  font-size: var(--text-body); font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+.dategrid__day:hover { background: var(--surface-wash); }
+.dategrid__day--muted { color: var(--color-ash); }
+.dategrid__day[aria-selected="true"] { background: var(--color-ink); color: var(--color-paper); }
+.dategrid__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--spacing-12); }
+
+/* --- Toast — inverted, bottom-anchored above the tab bar, 4s. §5 ---------- */
+.toast {
+  position: fixed;
+  left: 50%; transform: translate(-50%, 12px);
+  bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom, 0px) + var(--spacing-16));
+  z-index: 70;
+  width: min(398px, calc(100vw - 32px));
+  display: flex; align-items: center; gap: var(--spacing-12);
+  background: var(--surface-inverted);
+  color: var(--color-paper);
+  border-radius: var(--radius-input);
+  padding: 14px 16px;
+  font-size: var(--text-small);
+  box-shadow: var(--shadow-overlay);
+  opacity: 0; visibility: hidden;
+  transition: opacity var(--duration-base) var(--ease-out),
+              transform var(--duration-base) var(--ease-out),
+              visibility var(--duration-base);
+}
+.toast[data-open="true"] { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+.toast__msg { flex: 1; }
+.toast__action {
+  font-size: var(--text-small); font-weight: var(--font-weight-w450);
+  color: var(--color-highlighter);        /* the toast is the only in-flow accent here */
+  flex: none;
+}
+
+/* --- Section header — subheading + optional trailing text link ----------- */
+.sectionhead { display: flex; align-items: baseline; justify-content: space-between; gap: var(--spacing-12); margin-bottom: var(--spacing-12); }
+.sectionhead__title { margin: 0; font-size: var(--text-subheading); line-height: var(--leading-subheading); letter-spacing: -0.01em; font-weight: var(--font-weight-regular); }
+.sectionhead__link { font-size: var(--text-body); color: var(--color-ink); }
+.sectionhead__link:hover { background: var(--surface-wash); box-shadow: 0 0 0 4px var(--surface-wash); }

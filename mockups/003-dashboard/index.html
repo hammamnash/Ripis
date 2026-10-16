@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ripis — Dashboard (mockup 003)</title>
+<link rel="stylesheet" href="../_shared/tokens.css">
+<link rel="stylesheet" href="../_shared/base.css">
+<link rel="stylesheet" href="../_shared/primitives.css">
+<link rel="stylesheet" href="../_shared/surfaces.css">
+</head>
+<body>
+<div id="mk"></div>
+
+<div class="phone">
+  <header class="appbar">
+    <div class="appbar__top">
+      <h1 class="appbar__title heading-sm">Dashboard</h1>
+      <button class="icon-btn" type="button" id="bell" aria-label="Reminders"></button>
+    </div>
+    <div class="monthsel" id="monthsel"></div>
+  </header>
+
+  <div class="screen" id="screen"></div>
+</div>
+
+<nav class="tabbar" id="tabbar"></nav>
+<div id="fabwrap"></div>
+
+<script src="../_shared/ledger.js"></script>
+<script src="../_shared/render.js"></script>
+<script src="../_shared/charts.js"></script>
+<script src="../_shared/ui.js"></script>
+<script>
+(function () {
+  'use strict';
+  var R = window.RIPIS, U = window.RIPIS_UI, N = window.RIPIS_RENDER, C = window.RIPIS_CHARTS;
+  var SCREENS = [
+    { id: 'list', name: '001 transactions', href: '../001-transactions-list/index.html' },
+    { id: 'input', name: '002 input', href: '../002-transaction-input/index.html' },
+    { id: 'dash', name: '003 dashboard', href: '../003-dashboard/index.html' }
+  ];
+  var ym = U.storedYm() || R.CURRENT_YM;
+
+  function sectionHead(title, link) {
+    return '<div class="sectionhead"><h2 class="sectionhead__title">' + title + '</h2>' +
+      (link ? '<button class="sectionhead__link" type="button" data-todo="' + link + '">' +
+        link + ' \u2192</button>' : '') + '</div>';
+  }
+
+  function walletSection() {
+    var ws = R.WALLETS.slice().sort(function (a, b) {
+      return Math.abs(R.value(b.id)) - Math.abs(R.value(a.id));
+    });
+    var pick = ws.filter(function (w) { return !w.is_liability; }).slice(0, 3)
+      .concat(ws.filter(function (w) { return w.is_liability; }));
+    return sectionHead('Wallets', 'All wallets') +
+      '<div class="walletgrid">' + pick.map(N.walletCard).join('') + '</div>' +
+      '<p class="caption">Balances are live: opening balance plus every row that touches the wallet. ' +
+      'A liability is stored positive and subtracted (ADR-0025).</p>';
+  }
+
+  function budgetSection() {
+    var rows = R.budgets(ym);
+    return sectionHead('Budgets', 'Budgets') +
+      '<div class="budgetlist">' + rows.map(N.budgetBar).join('') + '</div>' +
+      '<p class="caption">Under 80% positive, 80\u2013100% warning, exactly 100% warning, over 100% ' +
+      'negative \u2014 and the bar is what the wallet actually paid, whatever its currency (FR-10).</p>';
+  }
+
+  function chartCard(title, svg, note) {
+    return '<section class="card"><div class="chartcard__head">' +
+      '<h3 class="chartcard__title">' + title + '</h3>' +
+      '<button class="chartcard__link" type="button" data-todo="' + title + '">Last 6 months \u2192</button>' +
+      '</div><div class="chart">' + svg + '</div>' +
+      (note ? '<p class="chartcard__note">' + note + '</p>' : '') + '</section>';
+  }
+
+  function series() { return R.trend(); }
+
+  function chartSection() {
+    var s = series();
+    var slices = R.pieSlices(ym);
+    return chartCard('Spending by category', C.pie(slices.slices, { ym: ym }),
+        'Largest category takes ink, second the highlighter \u2014 the app\u2019s signature chart moment. ' +
+        'The list carries every value, so nothing depends on telling two similar greys apart.') +
+      chartCard('Spending trend', C.line(s.map(function (r) { return { m: r.m, v: r.expense }; }),
+        { label: 'Expense per month' }),
+        'Ink stroke, one hairline baseline, no gridlines. First, last and peak are labelled directly.') +
+      chartCard('Net cash flow', C.bars(s.map(function (r) {
+        return { m: r.m, v: r.income - r.expense };
+      }), { label: 'Net cash flow per month' }),
+        'Income minus expense per month. Transfers and exchanges are excluded from both \u2014 ' +
+        'moving your own money is not income (FR-05).');
+  }
+
+  function insightCard() {
+    var prev = R.prevMonth(ym);
+    function food(m) {
+      var row = R.spendByCategory(m).filter(function (r) { return r.id === 'food'; })[0];
+      return row ? row.amount : 0;
+    }
+    var now = food(ym), was = food(prev), body;
+    if (was > 0 && now > 0) {
+      var delta = Math.round(((now - was) / was) * 100);
+      body = '<b>Food</b> is <b>' + Math.abs(delta) + '%</b> ' + (delta >= 0 ? 'above' : 'below') +
+        ' ' + R.monthLabel(prev).split(' ')[0] + '. ' +
+        (delta >= 0 ? 'The month\u2019s biggest single move.' : 'Keep it up.');
+    } else {
+      body = 'No Food spending in ' + R.monthLabel(prev) + ' to compare against, so there is ' +
+        'nothing to say here yet.';
+    }
+    return '<div class="insight">' + window.RIPIS_ICON('info', 18) +
+      '<div class="insight__body">' + body +
+      ' <button class="insight__link" type="button" data-todo="Food transactions">' +
+      'See the Food rows</button></div></div>';
+  }
+
+  function monthsel() {
+    var atNow = ym === R.CURRENT_YM;
+    return '<button class="monthsel__btn" type="button" id="prev" aria-label="Previous month">' +
+        window.RIPIS_ICON('left', 20) + '</button>' +
+      '<span class="monthsel__label">' + R.monthLabel(ym) + '</span>' +
+      '<button class="monthsel__btn" type="button" id="next" aria-label="Next month"' +
+        (atNow ? ' disabled style="opacity:.35;cursor:default"' : '') + '>' +
+        window.RIPIS_ICON('right', 20) + '</button>';
+  }
+
+  function render() {
+    document.getElementById('monthsel').innerHTML = monthsel();
+    document.getElementById('screen').innerHTML =
+      N.hero(R.totals()) + walletSection() + budgetSection() + chartSection() + insightCard();
+    var pv = document.getElementById('prev'), nx = document.getElementById('next');
+    pv.addEventListener('click', function () { ym = R.prevMonth(ym); render(); });
+    if (nx && !nx.disabled) { nx.addEventListener('click', function () { ym = R.nextMonth(ym); render(); }); }
+    Array.prototype.forEach.call(document.querySelectorAll('[data-todo]'), function (b) {
+      b.addEventListener('click', function () {
+        U.toast(b.getAttribute('data-todo') + ' is not one of these three screens.');
+      });
+    });
+    var f = document.querySelector('[data-autofit]');
+    if (f) {
+      var size = U.autofit(f, 60, 34);
+      f.setAttribute('data-fit-size', size);
+    }
+  }
+
+  document.getElementById('mk').innerHTML = U.mkbar('dash', SCREENS);
+  document.getElementById('tabbar').innerHTML = U.tabbar('dashboard');
+  document.getElementById('fabwrap').innerHTML = U.fab('../002-transaction-input/index.html', 'Add transaction');
+  document.getElementById('bell').innerHTML = window.RIPIS_ICON('calendar');
+  U.bindMissing(document.getElementById('tabbar'));
+  document.getElementById('bell').addEventListener('click', function () {
+    U.toast('Reminders are in-app only \u2014 nothing reaches the ledger without you acting (ADR-0018).');
+  });
+  render();
+  U.applyTheme();
+  window.addEventListener('resize', function () {
+    var f = document.querySelector('[data-autofit]');
+    if (f) { U.autofit(f, 60, 34); }
+  });
+})();
+</script>
+</body>
+</html>
