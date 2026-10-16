@@ -1,0 +1,17 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Money is never floating point (ADR-0003), and no digit of a figure in a
+# migration, a seed or a fixture should be reflowed by an editor.
+[*.{ts,tsx,js,mjs,json,yml,yaml,css,prisma,sql}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false

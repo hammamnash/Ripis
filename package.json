@@ -1,0 +1,27 @@
+{
+  "name": "ripis",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Ripis — one private, multi-currency ledger.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "docs:tables": "node scripts/check-doc-tables.mjs",
+    "gate": "npm run typecheck && npm run lint && npm run test && npm run docs:tables"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}
