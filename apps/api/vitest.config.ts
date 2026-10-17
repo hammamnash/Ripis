@@ -44,6 +44,12 @@ function loadRootEnv(): Record<string, string> {
 export default defineConfig({
   test: {
     environment: 'node',
+    // Every spec file talks to the SAME local database, and reference data (`currency`) is seeded
+    // and torn down per file. In parallel, one file's teardown deletes the `TST` currency while a
+    // sibling is still using it — observed as an FK violation on `user_primary_currency_id_fkey`
+    // in one file and a unique-constraint race in the other. Files therefore run one at a time;
+    // this suite is I/O-bound and small, so the serial cost is negligible.
+    fileParallelism: false,
     // `test/**/*.spec.ts` is a separate pattern from `*.e2e-spec.ts` — the plan names the
     // database-constraint suites `schema.spec.ts`, and `-spec` is not `.spec`, so nothing
     // is collected twice.
