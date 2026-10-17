@@ -36,8 +36,12 @@ describe('CHECK constraints and trigram indexes (Task 1.7)', () => {
   });
 
   const refused = async (write: () => Promise<unknown>): Promise<string> => {
-    const error = await write().catch((thrown: { message?: string }) => thrown);
-    return String(error?.message ?? error);
+    try {
+      await write();
+      return 'NO ERROR — the database accepted a row it should have refused';
+    } catch (error) {
+      return String((error as { message?: string }).message ?? error);
+    }
   };
 
   beforeAll(async () => {

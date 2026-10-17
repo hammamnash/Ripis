@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  codeOfRefusal,
   columnsOf,
   createTestUser,
   indexesOf,
@@ -21,9 +22,9 @@ const AUDIT_ACTIONS = [
   'signed_in',
   'auth_failed',
   'password_changed',
-];
+] as const;
 
-const AUDIT_ENTITIES = ['transaction', 'wallet', 'budget', 'category', 'user', 'auth', 'export'];
+const AUDIT_ENTITIES = ['transaction', 'wallet', 'budget', 'category', 'user', 'auth', 'export'] as const;
 
 /**
  * Task 1.5 — `Budget` and `AuditLog` (FR-10, FR-14).
@@ -63,10 +64,8 @@ describe('Budget and AuditLog (Task 1.5, FR-10, FR-14)', () => {
   it('allows one budget per category per month, and the next month separately', async () => {
     await prisma.budget.create({ data: budget('2026-10-01') });
 
-    const duplicate = await prisma.budget
-      .create({ data: budget('2026-10-01') })
-      .catch((error: { code?: string }) => error);
-    expect(duplicate.code).toBe('P2002');
+    const duplicate = await codeOfRefusal(() => prisma.budget.create({ data: budget('2026-10-01') }));
+    expect(duplicate).toBe('P2002');
 
     await expect(prisma.budget.create({ data: budget('2026-11-01') })).resolves.toBeDefined();
     expect(await prisma.budget.count({ where: { user_id: userId } })).toBe(2);

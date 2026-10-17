@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  codeOfRefusal,
   columnsOf,
   createTestUser,
   prisma,
@@ -60,10 +61,12 @@ describe('Category (Task 1.3, ADR-0014)', () => {
       data: { user_id: userId, name: 'Transport', type: 'expense', color: '#111111' },
     });
 
-    const duplicate = await prisma.category
-      .create({ data: { user_id: userId, name: 'Transport', type: 'expense', color: '#111111' } })
-      .catch((error: { code?: string }) => error);
-    expect(duplicate.code).toBe('P2002');
+    const duplicate = await codeOfRefusal(() =>
+      prisma.category.create({
+        data: { user_id: userId, name: 'Transport', type: 'expense', color: '#111111' },
+      }),
+    );
+    expect(duplicate).toBe('P2002');
 
     await expect(
       prisma.category.create({

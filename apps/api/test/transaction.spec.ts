@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   CURRENCIES,
+  codeOfRefusal,
   columnsOf,
   createTestUser,
   indexesOf,
@@ -113,10 +114,10 @@ describe('Transaction (Task 1.4, ADR-0004)', () => {
   });
 
   it('refuses a base currency that does not exist', async () => {
-    const attempt = await prisma.transaction
-      .create({ data: { ...expense(), base_currency_id: 'NOPE' } })
-      .catch((error: { code?: string }) => error);
-    expect(attempt.code).toBe('P2003');
+    const attempt = await codeOfRefusal(() =>
+      prisma.transaction.create({ data: { ...expense(), base_currency_id: 'NOPE' } }),
+    );
+    expect(attempt).toBe('P2003');
   });
 
   it('has no attachment column, and receipt_number is a reference not a file (ADR-0022)', async () => {

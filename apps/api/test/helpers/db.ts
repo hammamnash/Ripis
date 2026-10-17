@@ -34,6 +34,20 @@ export async function seedCurrencies(): Promise<void> {
   }
 }
 
+/**
+ * Runs a write that is EXPECTED to be refused and returns the Prisma error code, or `undefined`
+ * if the write went through. Inline `promise.catch(...)` widening is what made these specs fail
+ * `tsc` while Vitest stayed green: SWC transpiles without typechecking.
+ */
+export async function codeOfRefusal(write: () => Promise<unknown>): Promise<string | undefined> {
+  try {
+    await write();
+    return undefined;
+  } catch (error) {
+    return (error as { code?: string }).code;
+  }
+}
+
 export async function createTestUser(): Promise<string> {
   await prisma.user.deleteMany({ where: { email: TEST_EMAIL } });
 
