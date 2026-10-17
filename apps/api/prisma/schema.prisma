@@ -25,6 +25,9 @@ model Currency {
   users   User[]
   wallets Wallet[]
 
+  transactions      Transaction[] @relation("transaction_currency")
+  base_transactions Transaction[] @relation("transaction_base_currency")
+
   @@map("currency")
 }
 
@@ -44,6 +47,7 @@ model User {
   primaryCurrency Currency @relation(fields: [primary_currency_id], references: [code])
   wallets         Wallet[]
   categories      Category[]
+  transactions    Transaction[]
 
   @@map("user")
 }
@@ -82,6 +86,9 @@ model Wallet {
   user     User     @relation(fields: [user_id], references: [id])
   currency Currency @relation(fields: [currency_id], references: [code])
 
+  transactions          Transaction[] @relation("source")
+  incoming_transactions Transaction[] @relation("destination")
+
   @@index([user_id, deleted_at])
   @@map("wallet")
 }
@@ -115,6 +122,8 @@ model Category {
 
   user User @relation(fields: [user_id], references: [id])
 
+  transactions Transaction[]
+
   @@unique([user_id, name, type])
   @@map("category")
 }
@@ -122,4 +131,61 @@ model Category {
 enum CategoryType {
   income
   expense
+}
+
+/// One row per event — a cross-currency transfer is ONE row, never two mirrored ones (ADR-0008).
+/// `occurred_on` drives reporting and `recorded_at` is audit only (ADR-0007); direction is carried
+/// by `transaction_type` and never by a negative amount (`02-context.md` §3).
+///
+/// The three amounts (ADR-0004): `amount` in the source wallet's currency, `destination_amount`
+/// when the two wallets differ, and `base_amount` frozen at entry so a historical total never
+/// moves. There is no `exchange_rate` column and there must never be one — a rate is arithmetic,
+/// derived for display.
+model Transaction {
+  id                    String    @id @default(uuid()) @db.Uuid
+  user_id               String    @db.Uuid
+  transaction_type      TxType
+  occurred_on           DateTime  @db.Date
+  recorded_at           DateTime  @default(now()) @db.Timestamptz
+  wallet_id             String    @db.Uuid
+  destination_wallet_id String?   @db.Uuid
+  category_id           String?   @db.Uuid
+  amount                Decimal   @db.Decimal(19, 4)
+  currency_id           String
+  base_amount           Decimal   @db.Decimal(19, 4)
+  /// Frozen with `base_amount`. Given a foreign key — unlike the plan's sketch — so a row cannot
+  /// point at a currency code that does not exist.
+  base_currency_id      String
+  destination_amount    Decimal?  @db.Decimal(19, 4)
+  description           String?
+  notes                 String?
+  /// Postgres `text[]`, GIN indexed at Task 1.8 (ADR-0021).
+  tags                  String[]  @default([])
+  merchant              String?
+  location              String?
+  project               String?
+  receipt_number        String?
+  created_at            DateTime  @default(now()) @db.Timestamptz
+  updated_at            DateTime  @updatedAt @db.Timestamptz
+  deleted_at            DateTime? @db.Timestamptz
+
+  user          User      @relation(fields: [user_id], references: [id])
+  wallet        Wallet    @relation("source", fields: [wallet_id], references: [id])
+  destination   Wallet?   @relation("destination", fields: [destination_wallet_id], references: [id])
+  category      Category? @relation(fields: [category_id], references: [id])
+  currency      Currency  @relation("transaction_currency", fields: [currency_id], references: [code])
+  base_currency Currency  @relation("transaction_base_currency", fields: [base_currency_id], references: [code])
+
+  @@index([user_id, occurred_on(sort: Desc)])
+  @@index([user_id, wallet_id, occurred_on])
+  @@index([user_id, category_id, occurred_on])
+  @@index([user_id, base_amount])
+  @@map("transaction")
+}
+
+enum TxType {
+  expense
+  income
+  transfer
+  exchange
 }
