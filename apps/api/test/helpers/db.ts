@@ -55,9 +55,11 @@ export async function createTestUser(): Promise<string> {
  * an undefined `prisma.budget` at Task 1.2 looked like.
  */
 export async function resetLedger(userId: string): Promise<void> {
+  await prisma.budget.deleteMany({ where: { user_id: userId } });
   await prisma.transaction.deleteMany({ where: { user_id: userId } });
   await prisma.category.deleteMany({ where: { user_id: userId } });
   await prisma.wallet.deleteMany({ where: { user_id: userId } });
+  await prisma.auditLog.deleteMany({ where: { user_id: userId } });
 }
 
 export async function teardownTestData(): Promise<void> {
@@ -86,18 +88,38 @@ export interface ColumnSpec {
   numeric_scale: number | null;
 }
 
-/** Reads what the database actually built, rather than trusting the schema that asked for it. */
-export function columnsOf(table: string): Promise<ColumnSpec[]> {
-  return prisma.$queryRaw<ColumnSpec[]>`
+/**
+ * Reads what the database actually built, rather than trusting the schema that asked for it.
+ *
+ * An empty answer is an ERROR, not an empty list: a table this schema declares always has columns,
+ * so no columns means the table is not there. Without this guard every "column X does not exist"
+ * assertion in these specs would pass vacuously against a table that was never created — which is
+ * exactly what the Task 1.5 RED run caught `has no deleted_at` doing.
+ */
+export async function columnsOf(table: string): Promise<ColumnSpec[]> {
+  const columns = await prisma.$queryRaw<ColumnSpec[]>`
     SELECT column_name, data_type, is_nullable, column_default, numeric_precision, numeric_scale
     FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = ${table}
     ORDER BY column_name
   `;
+
+  if (columns.length === 0) {
+    throw new Error(`No columns for table "${table}" — the table does not exist.`);
+  }
+
+  return columns;
 }
 
-export function indexesOf(table: string): Promise<{ indexdef: string }[]> {
-  return prisma.$queryRaw<{ indexdef: string }[]>`
+/** Same reasoning as `columnsOf`: every table has a primary key index, so empty means absent. */
+export async function indexesOf(table: string): Promise<{ indexdef: string }[]> {
+  const indexes = await prisma.$queryRaw<{ indexdef: string }[]>`
     SELECT indexdef FROM pg_indexes WHERE schemaname = 'public' AND tablename = ${table}
   `;
+
+  if (indexes.length === 0) {
+    throw new Error(`No indexes for table "${table}" — the table does not exist.`);
+  }
+
+  return indexes;
 }
