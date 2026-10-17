@@ -14,13 +14,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// An ISO 4217 currency. `minor_unit` decides display rounding (ADR-0003): IDR and VND are
-/// 0, USD is 2 — money is rounded once, at display, and never in the database.
+/// An ISO 4217 currency. `minor_unit` decides display rounding (ADR-0003): IDR, VND and JPY are
+/// 0, USD, SGD and EUR are 2 — money is rounded once, at display, and never in the database.
+/// `suffix` decides where the mark sits (ADR-0032), and exists so that placement is data rather
+/// than a branch inside the one formatter.
 model Currency {
   code       String @id
   name       String
   symbol     String
   minor_unit Int
+  /// The mark follows the digits (`5.000.000 ₫`) instead of leading them. Defaulted rather than
+  /// required so an INSERT that has not considered placement gets the common convention.
+  suffix     Boolean @default(false)
 
   users   User[]
   wallets Wallet[]

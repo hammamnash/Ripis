@@ -17,6 +17,9 @@ import { CURRENCIES, prisma, seedCurrencies, teardownTestData } from './helpers/
 const ADMIN_EMAIL = 'seed-admin@ripis.test';
 const PASSWORD = 'a-strong-passphrase-for-tests';
 
+/** The six currencies 01-prd.md §4 lists, and the only ones the seed creates. */
+const SEEDED_CODES = ['IDR', 'VND', 'USD', 'SGD', 'EUR', 'JPY'] as const;
+
 const env = {
   ADMIN_USERNAME: ADMIN_EMAIL,
   ADMIN_PASSWORD: PASSWORD,
@@ -77,14 +80,33 @@ describe('Admin seed (Task 2.2, ADR-0013, ADR-0019)', () => {
     await seedReferenceCurrencies(prisma);
     const first = await prisma.currency.count();
     await seedReferenceCurrencies(prisma);
+
     expect(await prisma.currency.count()).toBe(first);
-    expect(first).toBeGreaterThanOrEqual(3);
+    expect(first).toBeGreaterThanOrEqual(SEEDED_CODES.length);
   });
 
-  it('gives IDR and VND no decimals and USD two (ADR-0003)', async () => {
+  it('ships every currency 01-prd.md §4 lists, each with its own scale (ADR-0003)', async () => {
     await seedReferenceCurrencies(prisma);
-    const rows = await prisma.currency.findMany({ where: { code: { in: ['IDR', 'VND', 'USD'] } } });
-    expect(Object.fromEntries(rows.map((r) => [r.code, r.minor_unit]))).toEqual({ IDR: 0, VND: 0, USD: 2 });
+    const rows = await prisma.currency.findMany({ where: { code: { in: [...SEEDED_CODES] } } });
+
+    expect(Object.fromEntries(rows.map((row) => [row.code, row.minor_unit]))).toEqual({
+      IDR: 0,
+      VND: 0,
+      USD: 2,
+      SGD: 2,
+      EUR: 2,
+      JPY: 0,
+    });
+  });
+
+  it("places VND's mark after the digits, and nobody else's (ADR-0032)", async () => {
+    await seedReferenceCurrencies(prisma);
+    const rows = await prisma.currency.findMany({
+      where: { code: { in: [...SEEDED_CODES] } },
+      orderBy: { code: 'asc' },
+    });
+
+    expect(rows.filter((row) => row.suffix).map((row) => row.code)).toEqual(['VND']);
   });
 
   it('does not clobber an operator edit on a re-run', async () => {

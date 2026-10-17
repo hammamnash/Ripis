@@ -9,10 +9,16 @@ import { PrismaClient } from '@prisma/client';
 export const prisma = new PrismaClient();
 
 export const CURRENCIES = {
-  /** Two decimal places, like USD. */
-  base: { code: 'TST', name: 'Test Currency', symbol: 'T', minor_unit: 2 },
-  /** Zero decimal places, like IDR and VND (ADR-0003). */
-  zeroDecimal: { code: 'TS0', name: 'Test Zero-Decimal Currency', symbol: 'Z', minor_unit: 0 },
+  /** Two decimal places and a leading mark, like USD. */
+  base: { code: 'TST', name: 'Test Currency', symbol: 'T', minor_unit: 2, suffix: false },
+  /** Zero decimal places, like IDR (ADR-0003). */
+  zeroDecimal: {
+    code: 'TS0',
+    name: 'Test Zero-Decimal Currency',
+    symbol: 'Z',
+    minor_unit: 0,
+    suffix: false,
+  },
 } as const;
 
 export const TEST_EMAIL = 'phase-1-spec@ripis.test';
