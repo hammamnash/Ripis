@@ -3,8 +3,10 @@
 **A private finance tracker you run yourself.** Every wallet, currency and transaction you have, in one
 ledger — on your own hardware, with nobody else's data in it.
 
-> **Status: not built yet.** Ripis is fully specified and not yet implemented, so nothing in this
-> repository runs today. What follows describes the application being built.
+> **Status: foundations built, no screens yet.** The database schema and its eight migrations, the
+> seed, the one money formatter and the server-side scoping layer exist and are covered by
+> `npm run gate`; the interface is not built, so there is nothing to click yet. What follows describes
+> the application being built.
 
 ## What it's for
 
@@ -106,6 +108,7 @@ interface.
 
 ## The small print
 
-Ripis is specified, not built. The binding description — requirements, data model, screens, and the
+Ripis is specified, and its foundations are built: the schema, the seed and the money rules run today,
+while the screens do not. The binding description — requirements, data model, screens, and the
 decisions behind them including the alternatives that were rejected — lives in [`.ai/`](./.ai/). This
 page describes the application to the person who will use it; that folder is what it gets built from.
