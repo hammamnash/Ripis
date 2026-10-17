@@ -78,6 +78,15 @@ web_modules/
 .next
 out
 
+# Next.js generated, and not part of the source (create-next-app ignores it too)
+next-env.d.ts
+
+# Vercel
+.vercel
+
+# macOS
+.DS_Store
+
 # Nuxt.js build / generate output
 .nuxt
 dist

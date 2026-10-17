@@ -2,7 +2,7 @@
   "name": "ripis",
   "version": "0.0.0",
   "private": true,
-  "description": "Ripis — one private, multi-currency ledger.",
+  "description": "Ripis — one private, multi-currency ledger. One Next.js application, one deployment (ADR-0039).",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -11,9 +11,15 @@
     "node": ">=22"
   },
   "scripts": {
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck:app": "next typegen && tsc --noEmit",
+    "test:app": "vitest run",
+    "lint:app": "eslint",
+    "typecheck": "npm run typecheck:app && npm run typecheck --workspaces --if-present",
+    "test": "npm run test:app && npm run test --workspaces --if-present",
+    "lint": "npm run lint:app && npm run lint --workspaces --if-present",
     "docs:tables": "node scripts/check-doc-tables.mjs",
     "db:generate": "prisma generate --schema apps/api/prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema apps/api/prisma/schema.prisma",
@@ -22,9 +28,22 @@
     "gate": "npm run typecheck && npm run lint && npm run test && npm run docs:tables"
   },
   "prisma": {
-    "seed": "npm run db:seed -w apps/api"
+    "seed": "npm run db:seed"
+  },
+  "dependencies": {
+    "@ripis/money": "*",
+    "next": "16.4.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.2",
+    "tailwindcss": "^4",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },
