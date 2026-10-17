@@ -1,18 +1,53 @@
-import { defineConfig } from "vitest/config";
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { defineConfig } from 'vitest/config';
 
-/* Vitest's default exclude list covers node_modules and dist but not .next, and .next holds a full
-   copy of the compiled app. Pin the scan to the source trees so the suite can't walk build output.
+/**
+ * Phase 1's specs talk to a real PostgreSQL: the claims are about constraints the database
+ * enforces (ADR-0012), so a mock would assert nothing.
+ *
+ * Next loads `.env` for the app on its own; Vitest loads no dotenv at all, hence this loader. It
+ * reads `DATABASE_URL` out of the nearest `.env` rather than importing a dependency for four lines
+ * of parsing, and it searches upward so the suite behaves the same whether it is started from the
+ * repo root or from a subdirectory.
+ */
+function loadEnv(): Record<string, string> {
+  const candidates = [resolve(process.cwd(), '.env'), resolve(process.cwd(), '../.env')];
+  const found = candidates.find(
+    (path) => existsSync(path) && readFileSync(path, 'utf8').includes('DATABASE_URL='),
+  );
+  if (!found) return {};
 
-   These four directories are exhaustive on purpose: an `include` that misses a tree makes that
-   tree's tests uncollectable and silent, and Vitest walks UP to this config for any workspace that
-   has none of its own — which is how packages/money's suite went to zero tests. Anything added
-   outside them needs a pattern here (or its own config).
+  return Object.fromEntries(
+    readFileSync(found, 'utf8')
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith('#') && line.includes('='))
+      .map((line) => {
+        const at = line.indexOf('=');
+        return [line.slice(0, at).trim(), line.slice(at + 1).trim().replace(/^["']|["']$/g, '')];
+      }),
+  );
+}
 
-   The app needs no swc/esbuild plugin for decorator metadata (ADR-0035): that requirement left with
-   NestJS, and nothing in the app uses decorators. */
 export default defineConfig({
   test: {
-    include: ["{app,src,test,components}/**/*.test.{ts,tsx}"],
-    environment: "node",
+    environment: 'node',
+    /*
+     * Every spec file talks to the SAME local database, and reference data (`currency`) is seeded
+     * and torn down per file. In parallel, one file's teardown deletes the `TST` currency while a
+     * sibling is still using it — observed as an FK violation on `user_primary_currency_id_fkey`
+     * in one file and a unique-constraint race in the other. Files therefore run one at a time;
+     * this suite is I/O-bound and small, so the serial cost is negligible.
+     */
+    fileParallelism: false,
+    /*
+     * Named explicitly rather than left to the default `**\/*.{test,spec}.*`, which would also walk
+     * `.next` — a full copy of the compiled app. Both extensions are listed because the database
+     * specs end `.spec.ts` while the unit specs end `.test.ts`, and `components/` is here so a
+     * component test cannot be silently uncollectable.
+     */
+    include: ['{app,src,test,components}/**/*.{test,spec}.{ts,tsx}'],
+    env: loadEnv(),
   },
 });

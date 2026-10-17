@@ -1,9 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { defer, from, lastValueFrom } from 'rxjs';
 
-import { CallerContextInterceptor } from '../src/common/caller-context.interceptor';
-import { scopedPrisma } from '../src/common/prisma-user-scope';
-import { runAsCaller } from '../src/common/user-context';
+import { db } from '../src/server/db';
+import { runAsCaller } from '../src/server/context';
 import { CURRENCIES, prisma, resetLedger, seedCurrencies, teardownTestData } from './helpers/db';
 
 /**
@@ -23,7 +21,8 @@ const USER_B = 'scope-user-b@ripis.test';
 
 const SCOPED_MODELS = ['wallet', 'category', 'transaction', 'budget', 'auditLog'] as const;
 
-const scoped = scopedPrisma(prisma);
+/** The application's own client, so this suite drives the handle server code actually imports. */
+const scoped = db;
 let userA: string;
 let userB: string;
 let walletB: string;
@@ -212,33 +211,15 @@ describe('User scoping (Task 1.9, ADR-0020)', () => {
     expect(rows.map((row) => row.code)).toContain(CURRENCIES.base.code);
   });
 
-  it('puts the authenticated caller in context for the handler, through the interceptor', async () => {
-    const request = { user: { id: userA, role: 'user' as const } };
-    const context = { switchToHttp: () => ({ getRequest: () => request }) };
-    const next = { handle: () => defer(() => from(scoped.wallet.findMany({}))) };
-
-    const rows = (await lastValueFrom(
-      new CallerContextInterceptor().intercept(context as never, next as never),
-    )) as { user_id: string }[];
-
-    expect(rows.length).toBeGreaterThan(0);
-    expect(rows.every((row) => row.user_id === userA)).toBe(true);
-  });
-
-  it('runs an unauthenticated request with no caller: scoped reads refuse, shared data still reads', async () => {
-    const context = { switchToHttp: () => ({ getRequest: () => ({}) }) };
-    const interceptor = new CallerContextInterceptor();
-    const scopedRead = { handle: () => defer(() => from(scoped.wallet.findMany({}))) };
-    const sharedRead = { handle: () => defer(() => from(scoped.currency.findMany({}))) };
-
-    const refused = await outcomeOf(() =>
-      lastValueFrom(interceptor.intercept(context as never, scopedRead as never)),
-    );
-    expect(refused).toMatch(/caller/i);
-
-    const currencies = (await lastValueFrom(
-      interceptor.intercept(context as never, sharedRead as never),
-    )) as { code: string }[];
-    expect(currencies.map((row) => row.code)).toContain(CURRENCIES.base.code);
-  });
+  /*
+   * Two tests stood here and went with the framework (ADR-0039). They drove the request-time
+   * establishment of the caller through `CallerContextInterceptor`: the authenticated caller lands
+   * in context so a handler's scoped reads are the caller's rows, and an unauthenticated request
+   * runs with no caller at all.
+   *
+   * Both claims are still owed, and are now Task 2.3's — they belong to whatever establishes the
+   * context for a route handler, and there is no interceptor to test. They are recorded here rather
+   * than deleted quietly so the gap is visible. The second half of the second test, that shared
+   * reference data still reads with no caller, is asserted above and always was.
+   */
 });

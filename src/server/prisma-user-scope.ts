@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
-import { currentCaller } from './user-context';
+import { currentCaller } from './context';
 
 /**
  * The models that belong to one account and to nobody else (ADR-0020 — one account is one private

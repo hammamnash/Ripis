@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { hash, verify } from './password.service';
+import { hash, verify } from './password';
 
 /**
  * Task 2.1 — Argon2id (ADR-0001).

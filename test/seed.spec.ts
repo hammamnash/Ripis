@@ -51,7 +51,7 @@ describe('Admin seed (Task 2.2, ADR-0013, ADR-0019)', () => {
 
   it('leaves a password that still verifies, so the lockout cannot happen quietly', async () => {
     const admin = await seedAdmin(prisma, env);
-    const { verify } = await import('../src/auth/password.service');
+    const { verify } = await import('../src/server/auth/password');
 
     expect(await verify(admin.password_hash, PASSWORD)).toBe(true);
   });

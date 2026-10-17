@@ -27,5 +27,5 @@
     ".next/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", ".next", "apps"]
+  "exclude": ["node_modules", ".next"]
 }

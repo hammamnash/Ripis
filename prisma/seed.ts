@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client';
 
-import { hash } from '../src/auth/password.service';
+import { hash } from '../src/server/auth/password';
 
 /**
  * The admin account, seeded from the environment (ADR-0013, ADR-0019).
@@ -52,7 +52,25 @@ export async function seedReferenceCurrencies(prisma: PrismaClient): Promise<num
   return REFERENCE_CURRENCIES.length;
 }
 
-export async function seedAdmin(prisma: PrismaClient, env: NodeJS.ProcessEnv = process.env) {
+/**
+ * What the seed reads from the environment. Narrower than `ProcessEnv` on purpose: these three
+ * variables are the whole contract, so naming them turns a mistyped `env.ADMIN_*` into a compile
+ * error instead of a silent `undefined` that skips the credential check below.
+ */
+export interface SeedEnv {
+  ADMIN_USERNAME?: string;
+  ADMIN_PASSWORD?: string;
+  ADMIN_PRIMARY_CURRENCY?: string;
+}
+
+export async function seedAdmin(
+  prisma: PrismaClient,
+  env: SeedEnv = {
+    ADMIN_USERNAME: process.env.ADMIN_USERNAME,
+    ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
+    ADMIN_PRIMARY_CURRENCY: process.env.ADMIN_PRIMARY_CURRENCY,
+  },
+) {
   const username = env.ADMIN_USERNAME;
   const password = env.ADMIN_PASSWORD;
 

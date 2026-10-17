@@ -4,7 +4,6 @@
   "private": true,
   "description": "Ripis — one private, multi-currency ledger. One Next.js application, one deployment (ADR-0039).",
   "workspaces": [
-    "apps/*",
     "packages/*"
   ],
   "engines": {
@@ -17,20 +16,24 @@
     "typecheck:app": "next typegen && tsc --noEmit",
     "test:app": "vitest run",
     "lint:app": "eslint",
+    "pretypecheck": "npm run db:generate",
+    "pretest": "npm run db:generate",
     "typecheck": "npm run typecheck:app && npm run typecheck --workspaces --if-present",
     "test": "npm run test:app && npm run test --workspaces --if-present",
     "lint": "npm run lint:app && npm run lint --workspaces --if-present",
+    "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
+    "db:status": "prisma migrate status --schema prisma/schema.prisma",
+    "db:seed": "tsx --env-file=.env prisma/seed.cli.ts",
     "docs:tables": "node scripts/check-doc-tables.mjs",
-    "db:generate": "prisma generate --schema apps/api/prisma/schema.prisma",
-    "db:migrate": "prisma migrate dev --schema apps/api/prisma/schema.prisma",
-    "db:status": "prisma migrate status --schema apps/api/prisma/schema.prisma",
-    "db:seed": "npm run db:seed -w apps/api",
     "gate": "npm run typecheck && npm run lint && npm run test && npm run docs:tables"
   },
   "prisma": {
-    "seed": "npm run db:seed"
+    "seed": "tsx --env-file=.env prisma/seed.cli.ts"
   },
   "dependencies": {
+    "@node-rs/argon2": "^2.2.2",
+    "@prisma/client": "6.19.3",
     "@ripis/money": "*",
     "next": "16.4.2",
     "react": "19.3.0",
@@ -43,7 +46,9 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
+    "prisma": "6.19.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
   },
