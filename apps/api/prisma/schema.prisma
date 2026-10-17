@@ -1,0 +1,53 @@
+// Ripis — the Prisma schema.
+//
+// Phase 1 builds this file one task at a time; every model lands with its own migration
+// (`prisma migrate`, never hand-run SQL — ADR-0012).
+//
+// ADR-0038 pins this file and the client to the Prisma 6.x line for V1.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// An ISO 4217 currency. `minor_unit` decides display rounding (ADR-0003): IDR and VND are
+/// 0, USD is 2 — money is rounded once, at display, and never in the database.
+model Currency {
+  code       String @id
+  name       String
+  symbol     String
+  minor_unit Int
+
+  users User[]
+
+  @@map("currency")
+}
+
+/// One account is one private ledger: every table is scoped to a user (ADR-0020). There is
+/// deliberately no family, group or tenant entity.
+model User {
+  /// Prisma generates this uuid, not the database — raw SQL must supply `gen_random_uuid()`.
+  id                  String   @id @default(uuid()) @db.Uuid
+  name                String
+  email               String   @unique
+  password_hash       String
+  role                Role     @default(user)
+  primary_currency_id String
+  timezone            String   @default("Asia/Jakarta")
+  created_at          DateTime @default(now()) @db.Timestamptz
+
+  primaryCurrency Currency @relation(fields: [primary_currency_id], references: [code])
+
+  @@map("user")
+}
+
+/// `admin` is provisioned at first boot from `.env` and its password is hashed only when the
+/// row is created (ADR-0013, ADR-0019). No self-signup, no invite links.
+enum Role {
+  admin
+  user
+}
