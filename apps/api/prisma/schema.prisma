@@ -182,6 +182,14 @@ model Transaction {
   @@index([user_id, wallet_id, occurred_on])
   @@index([user_id, category_id, occurred_on])
   @@index([user_id, base_amount])
+  /// Postgres `text[]` needs the array operator class, and only GIN can answer a tag containment
+  /// filter (ADR-0021).
+  @@index([tags(ops: ArrayOps)], type: Gin)
+  /// FR-13 server-side search. Declared here rather than only in raw SQL: an index the schema does
+  /// not know about is drift to `prisma migrate dev`, which will happily DROP it in the next
+  /// migration it generates.
+  @@index([description(ops: raw("gin_trgm_ops"))], type: Gin, map: "transaction_description_trgm")
+  @@index([notes(ops: raw("gin_trgm_ops"))], type: Gin, map: "transaction_notes_trgm")
   @@map("transaction")
 }
 

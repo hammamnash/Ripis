@@ -125,6 +125,11 @@ describe('Transaction (Task 1.4, ADR-0004)', () => {
     expect(columns).toContain('receipt_number');
   });
 
+  it('carries a GIN index on tags, so a tag filter does not scan (ADR-0021)', async () => {
+    const definitions = (await indexesOf('transaction')).map((index) => index.indexdef).join('\n');
+    expect(definitions).toMatch(/USING gin \(tags\)/);
+  });
+
   it('soft deletes rather than removes (ADR-0005)', async () => {
     expect(
       (await columnsOf('transaction')).find((c) => c.column_name === 'deleted_at')?.is_nullable,
