@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { seedAdmin } from '../prisma/seed';
+import { seedAdmin, seedReferenceCurrencies } from '../prisma/seed';
 import { CURRENCIES, prisma, seedCurrencies, teardownTestData } from './helpers/db';
 
 /**
@@ -72,4 +72,26 @@ describe('Admin seed (Task 2.2, ADR-0013, ADR-0019)', () => {
     expect(admin.password_hash).not.toContain(PASSWORD);
     expect(admin.password_hash.startsWith('$argon2id$')).toBe(true);
   });
+
+  it('seeds the reference currencies idempotently', async () => {
+    await seedReferenceCurrencies(prisma);
+    const first = await prisma.currency.count();
+    await seedReferenceCurrencies(prisma);
+    expect(await prisma.currency.count()).toBe(first);
+    expect(first).toBeGreaterThanOrEqual(3);
+  });
+
+  it('gives IDR and VND no decimals and USD two (ADR-0003)', async () => {
+    await seedReferenceCurrencies(prisma);
+    const rows = await prisma.currency.findMany({ where: { code: { in: ['IDR', 'VND', 'USD'] } } });
+    expect(Object.fromEntries(rows.map((r) => [r.code, r.minor_unit]))).toEqual({ IDR: 0, VND: 0, USD: 2 });
+  });
+
+  it('does not clobber an operator edit on a re-run', async () => {
+    await seedReferenceCurrencies(prisma);
+    await prisma.currency.update({ where: { code: 'USD' }, data: { symbol: 'US$' } });
+    await seedReferenceCurrencies(prisma);
+    expect((await prisma.currency.findUniqueOrThrow({ where: { code: 'USD' } })).symbol).toBe('US$');
+  });
 });
+

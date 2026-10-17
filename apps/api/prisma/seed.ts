@@ -19,6 +19,39 @@ import { hash } from '../src/auth/password.service';
  * A missing credential throws instead of falling back to a default: a default password is a live
  * credential in a repository, and ADR-0013 rejects it in writing.
  */
+/**
+ * The currencies the app ships with (ADR-0003).
+ *
+ * This is reference data, not user data: without these rows `User.primary_currency_id` — a foreign
+ * key — has nothing to point at, and the app's own default of `IDR` cannot be satisfied on a fresh
+ * database. `minor_unit` is the whole reason the column exists: IDR and VND have no decimal places
+ * and USD has two, so a single global scale would render `Rp 1.250.000,00`.
+ */
+const REFERENCE_CURRENCIES = [
+  { code: 'IDR', name: 'Indonesian rupiah', symbol: 'Rp', minor_unit: 0 },
+  { code: 'VND', name: 'Vietnamese dong', symbol: '\u20ab', minor_unit: 0 },
+  { code: 'USD', name: 'US dollar', symbol: '$', minor_unit: 2 },
+];
+
+/**
+ * Inserts the reference currencies, and leaves existing rows exactly as they are.
+ *
+ * `update: {}` is deliberate: on a re-run the row is found and nothing is written, so an operator
+ * who corrected a symbol or a minor unit keeps their correction instead of having it reverted by
+ * the next deploy.
+ */
+export async function seedReferenceCurrencies(prisma: PrismaClient): Promise<number> {
+  for (const currency of REFERENCE_CURRENCIES) {
+    await prisma.currency.upsert({
+      where: { code: currency.code },
+      update: {},
+      create: currency,
+    });
+  }
+
+  return REFERENCE_CURRENCIES.length;
+}
+
 export async function seedAdmin(prisma: PrismaClient, env: NodeJS.ProcessEnv = process.env) {
   const username = env.ADMIN_USERNAME;
   const password = env.ADMIN_PASSWORD;

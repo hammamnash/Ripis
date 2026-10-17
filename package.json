@@ -18,7 +18,11 @@
     "db:generate": "prisma generate --schema apps/api/prisma/schema.prisma",
     "db:migrate": "prisma migrate dev --schema apps/api/prisma/schema.prisma",
     "db:status": "prisma migrate status --schema apps/api/prisma/schema.prisma",
+    "db:seed": "npm run db:seed -w apps/api",
     "gate": "npm run typecheck && npm run lint && npm run test && npm run docs:tables"
+  },
+  "prisma": {
+    "seed": "npm run db:seed -w apps/api"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

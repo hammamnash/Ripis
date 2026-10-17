@@ -8,6 +8,7 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "db:generate": "prisma generate",
+    "db:seed": "tsx --env-file=../../.env prisma/seed.cli.ts",
     "pretypecheck": "npm run db:generate",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "pretest": "npm run db:generate",
@@ -23,6 +24,7 @@
     "@types/supertest": "^7.2.1",
     "prisma": "6.19.3",
     "supertest": "^7.3.1",
+    "tsx": "^4.23.15",
     "unplugin-swc": "^2.0.0",
     "vitest": "^5.0.5"
   },
