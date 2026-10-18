@@ -156,7 +156,7 @@ describe('the direction is derived from value, and a liability inverts it', () =
 describe('a reconciliation is an ordinary income or expense row (ADR-0017)', () => {
   it('writes the note exactly, counts in the month, and moves value by the difference', async () => {
     const cash = await wallet('Asset for the totals', false, '0.0000');
-    const before = await runAsCaller(caller, () => monthSummary('2026-10'));
+    const before = await runAsCaller(caller, () => monthSummary({ month: '2026-10' }));
 
     const result = await reconcile(cash, '-300000.0000', 'expense');
 
@@ -166,7 +166,7 @@ describe('a reconciliation is an ordinary income or expense row (ADR-0017)', () 
 
     // It counts toward expense like anything else — its note is its only marker, and there is no
     // "exclude reconciliations" filter anywhere (ADR-0017).
-    const after = await runAsCaller(caller, () => monthSummary('2026-10'));
+    const after = await runAsCaller(caller, () => monthSummary({ month: '2026-10' }));
     expect(Number(after.expense) - Number(before.expense)).toBe(300000);
     expect(after.counts.expense - before.counts.expense).toBe(1);
     expect(result.body.differenceValue).toBe('-300000.0000');

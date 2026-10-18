@@ -1,22 +1,23 @@
 import { Prisma, type TxType } from '@prisma/client';
 
-import { currentCaller } from '../context';
 import { db } from '../db';
-import { ApiError } from '../http/errors';
 import { money } from '../money/amount';
-import { firstOfMonth, monthWindow, parseCalendarDate } from '../time/calendar-date';
+import { addDays, calendarDate } from '../time/calendar-date';
+import { parseReportFilter, primaryCurrency, reportWhere, wholeMonthOf, type ReportQuery } from './filter';
 
 /**
- * A month's income, expense and net (FR-11, Task 3.9).
+ * A period's income, expense and net (FR-11, Task 3.9).
  *
  * **It reads `occurred_on` and nothing else.** `recorded_at` is a timestamp and is audit only, so a
  * transaction entered in November about an October purchase belongs to October — and this query cannot
  * accidentally include the November one, because the two columns are different types and only one of them
  * is filtered here (ADR-0007).
  *
- * **The window is half-open** — `[first of the month, first of the next month)` — rather than a `BETWEEN`
- * with a last day in it, because every month's last day is a different number and `2026-02-30` is exactly
- * the string a generated inclusive bound produces.
+ * **The window is half-open** — `[from, to)` — rather than a `BETWEEN` with a last day in it, because
+ * every month's last day is a different number and `2026-02-30` is exactly the string a generated
+ * inclusive bound produces. It comes from `filter.ts` now, so that the summary, the breakdowns and the
+ * trends narrow over the same days (Task 4.4) — three modules deriving a month's bounds separately is
+ * three chances to disagree about which day October ends on.
  *
  * **Transfers and exchanges are absent from both totals by construction, not by a filter.** The query sums
  * rows whose type is `income` or `expense`, so a transfer has nowhere to land: it is neither, and summing
@@ -24,18 +25,21 @@ import { firstOfMonth, monthWindow, parseCalendarDate } from '../time/calendar-d
  * is not the sum of its internal movements. There is no "exclude transfers" clause to get wrong.
  *
  * Totals are in the **frozen base currency** (ADR-0004), so a month already reported does not change when a
- * rate moves.
- *
- * **The currency is read from the caller's own row, named explicitly.** `User` is not one of the models the
- * scoping extension narrows (ADR-0043 — a caller is established *by* looking one up), so an unfiltered
- * `findFirst` here returns whichever row the database offers first. That is the administrator's account,
- * with a different primary currency, and the query then sums nothing and reports a month of zeroes — which
- * is exactly how this line was caught, by a spec that ran after another file had created a second account.
+ * rate moves. The caller's primary currency is read by `primaryCurrency()`, which names the row it means
+ * for the reason stated there.
  */
 const COUNTED: TxType[] = ['income', 'expense'];
 
 export interface MonthSummary {
-  month: string;
+  /** The first day counted, inclusive. */
+  from: string;
+  /** The last day counted, inclusive — the window is half-open internally and widened back for the wire. */
+  to: string;
+  /**
+   * `2026-10-01` when the window is exactly one calendar month, otherwise `null`. A screen labels its
+   * period from this rather than from two bounds it would have to do date arithmetic on.
+   */
+  month: string | null;
   currency: string;
   income: string;
   expense: string;
@@ -45,34 +49,24 @@ export interface MonthSummary {
 
 /**
  * `month` is any calendar date in the month being summarised — `"2026-10-01"`, or `"2026-10"` read as its
- * first day. Taking a date rather than a year-and-month pair keeps one parsing rule for the whole app.
+ * first day; a range is `from` and `to` instead. Taking a date rather than a year-and-month pair keeps one
+ * parsing rule for the whole application, and it is `parseReportFilter` that applies it.
  */
-export async function monthSummary(month: string): Promise<MonthSummary> {
-  const anchor = parseCalendarDate(month.length === 7 ? `${month}-01` : month, 'month');
-  const { from, to } = monthWindow(anchor);
-
-  const caller = currentCaller();
-  if (caller === undefined) {
-    // Unreachable through a route — `withCaller` establishes the context — and stated rather than asserted
-    // so the module's contract is "runs as somebody" rather than "assumes somebody".
-    throw new ApiError('unauthenticated', 401, 'A month summary is read as an account.');
-  }
-
-  const user = await db.user.findUnique({
-    where: { id: caller.id },
-    select: { primary_currency_id: true },
-  });
-  if (user === null) {
-    throw new ApiError('not_found', 404, 'No such account.');
-  }
+export async function monthSummary(query: ReportQuery): Promise<MonthSummary> {
+  const filter = parseReportFilter(query);
+  const currency = await primaryCurrency();
 
   const rows = await db.transaction.groupBy({
     by: ['transaction_type'],
     where: {
+      ...reportWhere(filter, filter, currency),
+      // Stated in the module that sums rather than inherited from the filter builder, because the
+      // soft-delete filter has to be visible in the file the query lives in (ADR-0005): a total that
+      // forgets it is inflated and entirely plausible.
       deleted_at: null,
-      transaction_type: { in: COUNTED },
-      occurred_on: { gte: from, lt: to },
-      base_currency_id: user.primary_currency_id,
+      // A filter that names a type narrows this to it — filtering to transfers is a report of two zeroes,
+      // which is what "only transfers" means for income and expense. Without one, the two counted types.
+      transaction_type: filter.transactionType ?? { in: COUNTED },
     },
     _sum: { base_amount: true },
     _count: { _all: true },
@@ -87,8 +81,10 @@ export async function monthSummary(month: string): Promise<MonthSummary> {
   const expense = sumOf('expense');
 
   return {
-    month: firstOfMonth(anchor).toISOString().slice(0, 10),
-    currency: user.primary_currency_id,
+    from: calendarDate(filter.from),
+    to: calendarDate(addDays(filter.to, -1)),
+    month: wholeMonthOf(filter),
+    currency,
     income: money(income),
     expense: money(expense),
     net: money(income.minus(expense)),

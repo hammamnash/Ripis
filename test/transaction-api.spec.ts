@@ -89,7 +89,7 @@ async function record(body: Record<string, unknown>) {
   return { status: response.status, body: (await response.json()) as TxBody };
 }
 
-const summary = (month: string) => runAsCaller(caller, () => monthSummary(month));
+const summary = (month: string) => runAsCaller(caller, () => monthSummary({ month }));
 
 /**
  * The ids a half-open date window returns, asked of the endpoint rather than the module — the filters are

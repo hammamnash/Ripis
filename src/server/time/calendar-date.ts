@@ -68,3 +68,16 @@ export function monthWindow(month: Date): { from: Date; to: Date } {
 
   return { from, to: new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 1, 1)) };
 }
+
+/**
+ * A calendar date moved by whole days, still at UTC midnight.
+ *
+ * A range arrives from a screen with an **inclusive** last day — "to 31 October" means the 31st — and
+ * every window in this application is half-open, so the day after it is what gets stored and queried.
+ * The addition lives here rather than at each call site because the failure it prevents is this module's
+ * whole subject: a date built from local midnight (or from a timestamp) drifts into the previous day,
+ * and a window that is one day short drops a transaction that was entered at the end of it.
+ */
+export function addDays(date: Date, days: number): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + days));
+}
