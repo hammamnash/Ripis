@@ -1,3 +1,5 @@
+import { unstable_rethrow } from 'next/navigation';
+
 import { runAsCaller, type Caller } from '../context';
 import { ApiError, errorResponse } from '../http/errors';
 import { readAuthConfig, type AuthConfig } from './config';
@@ -93,6 +95,19 @@ export function withCaller<Context = unknown>(
         handler(request, authenticated, context),
       );
     } catch (error) {
+      /*
+       * Next's build-time prerender probe is not a failure, it is a *question* — "could this route be
+       * static?" — and it asks by throwing. `bearerToken` reads `request.headers` on every guarded
+       * request, and during the probe that read throws `DynamicServerError` (digest
+       * `DYNAMIC_SERVER_USAGE`) to answer no. Rendering it as a 500 turned the answer into a logged
+       * failure on every build: eight lines naming `/api/budgets/status` and the three `/api/reports/*`
+       * routes. The routes were dynamic anyway — Next marks them from its own usage tracking — so what
+       * the swallowing bought was a build that reported a problem it did not have. `unstable_rethrow`
+       * is Next's own predicate for its internal control-flow errors (`notFound`, `redirect`, and this
+       * bailout), so the guard stays correct when Next adds a fifth one.
+       */
+      unstable_rethrow(error);
+
       return errorResponse(error);
     }
   };
