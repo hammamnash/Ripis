@@ -70,13 +70,18 @@ function where(query: TransactionQuery): Prisma.TransactionWhereInput {
   if (query.tag !== undefined) filter.tags = { has: query.tag };
 
   if (query.search !== undefined && query.search.trim() !== '') {
-    // FR-13: server-side search over the two free-text columns, and the trigram indexes behind them are
-    // why this is `contains` rather than a prefix match (§3, ADR-0021).
+    // FR-13: server-side search over the three free-text columns §13 names — Description, Notes and
+    // Merchant — and the trigram indexes behind them are why this is `contains` rather than a prefix
+    // match (§3, ADR-0021). Three indexed branches, not two: a fourth field (or a third field left
+    // unindexed, which is how `merchant` arrived) turns this into a sequential scan of the ledger, and
+    // nothing in the response would say so. `location`, `project` and `receipt_number` are stored on the
+    // row and are deliberately not searched — §13 does not name them.
     filter.AND = [
       {
         OR: [
           { description: { contains: query.search, mode: 'insensitive' } },
           { notes: { contains: query.search, mode: 'insensitive' } },
+          { merchant: { contains: query.search, mode: 'insensitive' } },
         ],
       },
     ];

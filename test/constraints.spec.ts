@@ -190,5 +190,8 @@ describe('CHECK constraints and trigram indexes (Task 1.7)', () => {
     expect(definitions).toContain('gin_trgm_ops');
     expect(definitions).toMatch(/description gin_trgm_ops/);
     expect(definitions).toMatch(/notes gin_trgm_ops/);
+    // §13 names three searchable fields. The search is one `OR` over them, so this third index is not
+    // decoration: with a branch that has no index the planner gives up on the other two as well.
+    expect(definitions).toMatch(/merchant gin_trgm_ops/);
   });
 });

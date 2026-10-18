@@ -196,6 +196,10 @@ model Transaction {
   /// migration it generates.
   @@index([description(ops: raw("gin_trgm_ops"))], type: Gin, map: "transaction_description_trgm")
   @@index([notes(ops: raw("gin_trgm_ops"))], type: Gin, map: "transaction_notes_trgm")
+  /// §13 names **three** searchable fields, and this is the third. It is a separate index rather than a
+  /// third opinion about the first two: the search is one `OR`, so a single branch without an index is
+  /// enough for the planner to abandon the plan the other two bought.
+  @@index([merchant(ops: raw("gin_trgm_ops"))], type: Gin, map: "transaction_merchant_trgm")
   @@map("transaction")
 }
 
