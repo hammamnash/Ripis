@@ -52,12 +52,19 @@ export async function createCategory(input: NewCategory): Promise<CategoryRespon
     throw new ApiError('validation_failed', 400, 'name is required.', 'name');
   }
 
+  // Including the archived ones, because the database's unique constraint does: `@@unique([user_id, name,
+  // type])` has no `WHERE archived_at IS NULL` on it, so an archived category keeps its name. Checking
+  // without them would let the API pass and the insert fail, turning a name collision into a 500 — and a
+  // person who archived "Gift" last year would get a 500 for trying to create "Gift" this year.
   const existing = await db.category.findFirst({ where: { name, type } });
+
   if (existing !== null) {
     throw new ApiError(
       'duplicate_category',
       409,
-      `There is already a ${type} category called ${name}.`,
+      existing.archived_at === null
+        ? `There is already a ${type} category called ${name}.`
+        : `A ${type} category called ${name} was archived, and an archived category keeps its name. Rename or restore that one.`,
       'name',
     );
   }

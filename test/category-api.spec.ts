@@ -214,6 +214,23 @@ describe('a category is archived, never deleted (ADR-0014)', () => {
     expect(await prisma.category.count({ where: { id: created.body.id } })).toBe(1);
     expect(await prisma.transaction.count({ where: { category_id: created.body.id } })).toBe(1);
   });
+
+  it('keeps the name of an archived category, and says so instead of colliding', async () => {
+    const created = await create(ledger, { name: 'Kept name', type: 'expense' });
+    await archiveCategory(
+      ledger.request(`/api/categories/${created.body.id}/archive`, { method: 'POST' }),
+      ctx(created.body.id),
+    );
+
+    // The unique constraint spans archived rows — it has no partial predicate — so the name is genuinely
+    // taken. The failure worth preventing is a 500 from the unique violation, or a message that claims the
+    // category is still in use when it is not.
+    const reuse = await create(ledger, { name: 'Kept name', type: 'expense' });
+
+    expect(reuse.status).toBe(409);
+    expect(reuse.body.error).toMatchObject({ code: 'duplicate_category', field: 'name' });
+    expect(await prisma.category.count({ where: { name: 'Kept name' } })).toBe(1);
+  });
 });
 
 describe('a category is only reachable by its owner (ADR-0020)', () => {
