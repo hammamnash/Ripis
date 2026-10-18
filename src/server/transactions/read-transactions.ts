@@ -2,6 +2,7 @@ import type { Prisma, TxType } from '@prisma/client';
 
 import { db } from '../db';
 import { ApiError } from '../http/errors';
+import { parseAmount } from '../money/amount';
 import { parseCalendarDate } from '../time/calendar-date';
 import { serialiseTransaction, type TransactionResponse } from './serialise';
 
@@ -26,6 +27,9 @@ export interface TransactionQuery {
   walletId?: string;
   categoryId?: string;
   tag?: string;
+  amountMin?: string;
+  amountMax?: string;
+  currency?: string;
   search?: string;
   page?: number;
   perPage?: number;
@@ -45,6 +49,25 @@ const TYPES: TxType[] = ['expense', 'income', 'transfer', 'exchange'];
 export const DEFAULT_PER_PAGE = 25;
 export const MAX_PER_PAGE = 100;
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * An id-shaped filter, checked before it reaches the database.
+ *
+ * A malformed id is compared against a `uuid` column and comes back as a driver error, which the error
+ * handler can only report as a `500 internal_error` — so a value a user can edit into the address bar
+ * becomes "something went wrong on our side", and the log fills with faults that are not faults. Measured on
+ * `?walletId=not-a-uuid` (2026-10-19): a 500 with no hint of which parameter caused it. Checked here, it is
+ * the same `400 validation_failed` every other bad value on this endpoint produces, naming the field.
+ */
+function filterId(value: string, field: string): string {
+  if (!UUID.test(value)) {
+    throw new ApiError('validation_failed', 400, `${field} must be a UUID.`, field);
+  }
+
+  return value;
+}
+
 function where(query: TransactionQuery): Prisma.TransactionWhereInput {
   const filter: Prisma.TransactionWhereInput = { deleted_at: query.includeDeleted === true ? undefined : null };
 
@@ -63,11 +86,50 @@ function where(query: TransactionQuery): Prisma.TransactionWhereInput {
   if (query.walletId !== undefined) {
     // Either leg: a transfer out of this wallet and one into it are both movements of this wallet, and a
     // screen that showed only the outgoing half would hide half of the wallet's history.
-    filter.OR = [{ wallet_id: query.walletId }, { destination_wallet_id: query.walletId }];
+    const walletId = filterId(query.walletId, 'walletId');
+
+    filter.OR = [{ wallet_id: walletId }, { destination_wallet_id: walletId }];
   }
 
-  if (query.categoryId !== undefined) filter.category_id = query.categoryId;
+  if (query.categoryId !== undefined) filter.category_id = filterId(query.categoryId, 'categoryId');
   if (query.tag !== undefined) filter.tags = { has: query.tag };
+
+  // Amount Range reads `base_amount`, never `amount`, and `(user_id, base_amount)` is the only amount index
+  // there is. A range over six currencies in their own units compares nothing to nothing — 1,200,000 in a
+  // zero-decimal currency is not "bigger" than 63 dollars — so the comparable figure is the frozen base
+  // amount, and the label on the screen has to name the primary currency (§3, §13, ADR-0004). The bounds stay
+  // decimals: `Number()` on money is the defect §10 names, and it would round the bound before comparing it.
+  const min = query.amountMin === undefined ? undefined : parseAmount(query.amountMin, 'amountMin');
+  const max = query.amountMax === undefined ? undefined : parseAmount(query.amountMax, 'amountMax');
+
+  if (min !== undefined && max !== undefined && min.greaterThan(max)) {
+    // Not a filter that matches nothing — a filter that cannot have been meant. Answering `data: []` to it
+    // would look like an empty ledger.
+    throw new ApiError(
+      'validation_failed',
+      400,
+      'amountMin is above amountMax, which can only match nothing.',
+      'amountMin',
+    );
+  }
+
+  if (min !== undefined || max !== undefined) {
+    filter.base_amount = { ...(min === undefined ? {} : { gte: min }), ...(max === undefined ? {} : { lte: max }) };
+  }
+
+  // The transaction's **own** currency. `base_currency_id` is the user's primary currency by definition
+  // (ADR-0004, ADR-0015), so a filter on it would keep every row and tell a screen nothing. A transfer is
+  // filtered by the currency it left in rather than either leg, which is the same choice the amount columns
+  // make: the row has one currency, and its destination is a separate column (§12).
+  if (query.currency !== undefined && query.currency.trim() !== '') {
+    const code = query.currency.trim().toUpperCase();
+
+    if (!/^[A-Z0-9]{3,4}$/.test(code)) {
+      throw new ApiError('validation_failed', 400, 'That is not a currency code.', 'currency');
+    }
+
+    filter.currency_id = code;
+  }
 
   if (query.search !== undefined && query.search.trim() !== '') {
     // FR-13: server-side search over the three free-text columns §13 names — Description, Notes and
