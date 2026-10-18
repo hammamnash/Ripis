@@ -32,14 +32,25 @@ export async function requireCategory(id: string): Promise<Category> {
   return category;
 }
 
-export async function requireCategoryForType(id: string, type: Category['type']): Promise<Category> {
+/**
+ * `use` names the act being refused, and exists so the sentence can be true.
+ *
+ * The rule is one rule wherever a category is attached to something — not archived, and of the right
+ * type — but the message has to name what the caller was doing, or the refusal reads as a bug in an
+ * unrelated feature. Budgets pass `'a budget'` and are otherwise checked identically (Task 5.1).
+ */
+export async function requireCategoryForType(
+  id: string,
+  type: Category['type'],
+  use = 'a new transaction',
+): Promise<Category> {
   const category = await requireCategory(id);
 
   if (category.archived_at !== null) {
     throw new ApiError(
       'category_archived',
       400,
-      `That category is archived, so it cannot be used on a new transaction.`,
+      `That category is archived, so it cannot be used on ${use}.`,
       'categoryId',
     );
   }
