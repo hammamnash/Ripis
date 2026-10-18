@@ -37,6 +37,7 @@
     "@node-rs/argon2": "^2.2.2",
     "@prisma/client": "6.19.3",
     "@ripis/money": "*",
+    "exceljs": "^4.4.0",
     "jose": "^6.2.12",
     "next": "16.4.2",
     "react": "19.3.0",
