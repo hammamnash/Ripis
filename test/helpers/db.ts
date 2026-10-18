@@ -75,6 +75,7 @@ export async function createTestUser(): Promise<string> {
  * an undefined `prisma.budget` at Task 1.2 looked like.
  */
 export async function resetLedger(userId: string): Promise<void> {
+  await prisma.session.deleteMany({ where: { user_id: userId } });
   await prisma.budget.deleteMany({ where: { user_id: userId } });
   await prisma.transaction.deleteMany({ where: { user_id: userId } });
   await prisma.category.deleteMany({ where: { user_id: userId } });

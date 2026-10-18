@@ -6,6 +6,10 @@ import { currentCaller } from './context';
  * The models that belong to one account and to nobody else (ADR-0020 — one account is one private
  * ledger). `currency` is deliberately absent: it is shared reference data, not a user's row, and an
  * unscoped service must still be able to read it.
+ *
+ * `User` and `Session` are absent for a different reason (ADR-0043): a caller is established *by*
+ * reading them, so scoping them would require a caller before there is one. Their reads are confined
+ * to `src/server/auth/**`, and every write to either is inside `runAsCaller` for what it triggers.
  */
 const SCOPED_MODELS = new Set(['Wallet', 'Category', 'Transaction', 'Budget', 'AuditLog']);
 

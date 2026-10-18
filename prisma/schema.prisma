@@ -54,6 +54,7 @@ model User {
   categories      Category[]
   transactions    Transaction[]
   budgets         Budget[]
+  sessions        Session[]
 
   @@map("user")
 }
@@ -262,4 +263,21 @@ enum AuditAction {
   signed_in
   auth_failed
   password_changed
+}
+
+/// One row per sign-in (ADR-0040). The refresh token is the only credential a user can kill on demand,
+/// so this row — not the access token — is what "signed out" means.
+model Session {
+  id                 String    @id @default(uuid()) @db.Uuid
+  user_id            String    @db.Uuid
+  /// HMAC-SHA256 of this session's current refresh secret, keyed by JWT_REFRESH_SECRET. Never the token.
+  refresh_token_hash String
+  created_at         DateTime  @default(now()) @db.Timestamptz
+  expires_at         DateTime  @db.Timestamptz
+  revoked_at         DateTime? @db.Timestamptz
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@map("session")
 }
