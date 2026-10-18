@@ -5,6 +5,7 @@ import type { Caller } from '../context';
 import { db } from '../db';
 import { money } from '../money/amount';
 import { calendarDate, parseCalendarDate } from '../time/calendar-date';
+import { XLSX_CONTENT_TYPE, xlsxBuffer, type ExportRange, type ExportedFile } from './file';
 
 /**
  * The Excel export of §12 (FR-12, Task 6.3).
@@ -37,22 +38,6 @@ export const EXPORT_HEADERS = [
   'Notes',
   'Created By',
 ] as const;
-
-export const XLSX_CONTENT_TYPE =
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-
-export interface ExportRange {
-  /** `YYYY-MM-DD`, inclusive. Named for the request body's field so a validation error points at it. */
-  startDate: string;
-  endDate: string;
-}
-
-export interface ExportedFile {
-  buffer: Buffer;
-  filename: string;
-  contentType: string;
-  rows: number;
-}
 
 /** Who created each of these transactions, according to the audit log rather than the row's owner. */
 async function creatorsOf(ids: string[]): Promise<Map<string, string>> {
@@ -117,7 +102,7 @@ export async function exportXlsx(actor: Caller, range: ExportRange): Promise<Exp
     ]);
   }
 
-  const buffer = Buffer.from(new Uint8Array(await workbook.xlsx.writeBuffer()));
+  const buffer = await xlsxBuffer(workbook);
 
   await writeAudit({
     actor,

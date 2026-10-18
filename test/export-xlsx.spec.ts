@@ -5,7 +5,8 @@ import { POST as createCategory } from '../app/api/categories/route';
 import { POST as exportSheet } from '../app/api/export/xlsx/route';
 import { POST as createTransaction } from '../app/api/transactions/route';
 import { POST as createWallet } from '../app/api/wallets/route';
-import { EXPORT_HEADERS, XLSX_CONTENT_TYPE } from '../src/server/export/xlsx';
+import { XLSX_CONTENT_TYPE } from '../src/server/export/file';
+import { EXPORT_HEADERS } from '../src/server/export/xlsx';
 import { CURRENCIES, prisma, teardownTestData } from './helpers/db';
 import { closeLedger, signedInLedger, type SpecLedger } from './helpers/session';
 
