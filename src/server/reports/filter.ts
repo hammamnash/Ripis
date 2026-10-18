@@ -296,7 +296,12 @@ function daysIn(window: Window): number {
   return Math.round((window.to.getTime() - window.from.getTime()) / 86_400_000);
 }
 
-function oneOf<T extends string>(text: string, allowed: readonly T[], field: string): T {
+/**
+ * One of a fixed set of names, refused with the field it arrived in. The kind a report is asked for
+ * (`kind=expense`) and the metric it plots go through this, so a value this layer does not know is a `400`
+ * naming the parameter rather than a report that comes back empty and looks like a quiet month.
+ */
+export function oneOf<T extends string>(text: string, allowed: readonly T[], field: string): T {
   const value = allowed.find((candidate) => candidate === text);
   if (value === undefined) {
     throw new ApiError('validation_failed', 400, `${field} must be one of ${allowed.join(', ')}.`, field);
