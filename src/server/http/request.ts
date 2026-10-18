@@ -77,6 +77,33 @@ export function readOptionalBoolean(
 }
 
 /**
+ * A field that is a list of strings, for `tags` (ADR-0021).
+ *
+ * Anything else in the array is refused rather than stringified: a tag is a label a person typed, and a
+ * number in there is a client that meant something else by it.
+ */
+export function readOptionalStringArray(
+  body: Record<string, unknown>,
+  field: string,
+): string[] | undefined {
+  if (!(field in body)) return undefined;
+
+  const value = body[field];
+
+  if (!Array.isArray(value)) {
+    throw new ApiError('validation_failed', 400, `${field} must be a list of tags.`, field);
+  }
+
+  for (const entry of value) {
+    if (typeof entry !== 'string') {
+      throw new ApiError('validation_failed', 400, `Every entry in ${field} must be text.`, field);
+    }
+  }
+
+  return value as string[];
+}
+
+/**
  * Refuses a body that names a field this endpoint does not have.
  *
  * Ignoring an unknown key is the more forgiving choice and the wrong one. A client that sent `parentId`

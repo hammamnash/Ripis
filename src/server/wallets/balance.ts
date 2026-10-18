@@ -120,3 +120,28 @@ export async function syncBalances(walletIds: string[], client: BalanceClient): 
     await syncBalance(walletId, client);
   }
 }
+
+/**
+ * The wallets a row touches: the source always, the destination when there is one.
+ *
+ * It takes a row rather than two ids because the caller has a row and the mistake this prevents is passing
+ * `wallet_id` twice. Every write path — create, edit, delete, restore, reconcile — asks this question, and
+ * a delete that synced only the source would leave a deleted transfer's arrival still counted in the wallet
+ * it arrived in.
+ */
+export function walletLegsOf(row: {
+  wallet_id: string;
+  destination_wallet_id: string | null;
+}): string[] {
+  return row.destination_wallet_id === null
+    ? [row.wallet_id]
+    : [row.wallet_id, row.destination_wallet_id];
+}
+
+/** The same question for a row that is about to change: every wallet the old shape and the new one touch. */
+export function walletLegsBeforeAndAfter(
+  before: { wallet_id: string; destination_wallet_id: string | null },
+  after: { wallet_id: string; destination_wallet_id: string | null },
+): string[] {
+  return [...new Set([...walletLegsOf(before), ...walletLegsOf(after)])];
+}
