@@ -4,6 +4,7 @@ import { assertPasswordIsLongEnough } from '../auth/password-policy';
 import { requireAdmin } from '../auth/require-admin';
 import type { Caller } from '../context';
 import { db } from '../db';
+import { normaliseEmail } from '../email';
 import { ApiError } from '../http/errors';
 
 /**
@@ -33,6 +34,11 @@ export async function createUser(input: NewUser): Promise<{ id: string }> {
   requireAdmin(input.actor);
   assertPasswordIsLongEnough(input.password, 'password');
 
+  // Folded to lowercase before both the uniqueness check and the write, so the check and the constraint
+  // agree — see `email.ts`. The check happens first so a duplicate is a 409 naming the field rather than
+  // a unique-violation rendered as a 500.
+  const email = normaliseEmail(input.email);
+
   const currency = await db.currency.findUnique({ where: { code: input.primaryCurrencyId } });
   if (currency === null) {
     throw new ApiError(
@@ -43,7 +49,7 @@ export async function createUser(input: NewUser): Promise<{ id: string }> {
     );
   }
 
-  if ((await db.user.findUnique({ where: { email: input.email } })) !== null) {
+  if ((await db.user.findUnique({ where: { email } })) !== null) {
     throw new ApiError('email_taken', 409, 'That email already has an account.', 'email');
   }
 
@@ -57,7 +63,7 @@ export async function createUser(input: NewUser): Promise<{ id: string }> {
       const user = await tx.user.create({
         data: {
           name: input.name,
-          email: input.email,
+          email,
           password_hash,
           primary_currency_id: input.primaryCurrencyId,
           role: 'user',

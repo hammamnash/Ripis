@@ -4,6 +4,7 @@ import type { Role } from '@prisma/client';
 
 import { writeAudit } from '../audit';
 import { db } from '../db';
+import { normaliseEmail } from '../email';
 import { ApiError } from '../http/errors';
 import type { AuthConfig } from './config';
 import { signAccessToken } from './jwt';
@@ -48,7 +49,7 @@ export async function signIn(
   submittedPassword: string,
   config: AuthConfig,
 ): Promise<SignInResult> {
-  const user = await db.user.findUnique({ where: { email: submittedEmail.trim() } });
+  const user = await db.user.findUnique({ where: { email: normaliseEmail(submittedEmail) } });
 
   if (user === null) {
     await verify(await absentAccountHash, submittedPassword);
