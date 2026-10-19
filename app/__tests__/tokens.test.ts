@@ -331,6 +331,9 @@ const TEXT_ON_SURFACE = [
      future remap back to it cannot regress silently. */
   ["--color-on-action", "--surface-action"],
   ["--color-panel", "--surface-action"],
+  /* §5 "Pill Button — Primary": Paper on the pill's own fill, in both themes. Paper on #262220 (dark) is
+     15.77:1; on #0c0a08 (light) 19.76:1. */
+  ["--color-paper", "--surface-primary"],
   /* Status chips: the semantic colour on its own wash. Worst pair is light warning at 4.65:1. */
   ["--color-positive", "--wash-positive"],
   ["--color-warning", "--wash-warning"],
@@ -347,9 +350,15 @@ describe("text contrast (§9: AA 4.5:1 on every surface that carries text)", () 
     ["dark", dark],
   ] as const) {
     it(`meets 4.5:1 for every declared pair in ${theme}`, () => {
+      /* The dark block is overrides-only, so a name it does not redeclare resolves to its :root value —
+         the four literal swatches are the same material in both themes, and --color-paper is one of them.
+         Falling back is the cascade, not a convenience: reading `dark[name]` alone would report the paper
+         label as undeclared rather than as readable. */
+      const value = (name: string) => hexOf(block[name] ?? light[name], name);
+
       const below = TEXT_ON_SURFACE.map(([text, background]) => ({
         pair: `${text} on ${background}`,
-        ratio: contrast(hexOf(block[text], text), hexOf(block[background], background)),
+        ratio: contrast(value(text), value(background)),
       })).filter(({ ratio }) => ratio < 4.5);
 
       expect(below).toEqual([]);

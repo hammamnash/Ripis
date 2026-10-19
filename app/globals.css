@@ -84,6 +84,7 @@
   --surface-insight: #fbe1d1;
   --surface-inverted: #1a1919;
   --surface-action: #e4f222;
+  --surface-primary: #0c0a08;     /* §5's Pill Button — Primary fill; see the shadcn mapping below */
 
   /* Type.
      ADR-0036: next/font self-hosts Inter and Source Serif 4 under a generated family name and
@@ -197,6 +198,7 @@
   --surface-insight: #3a2018;
   --surface-inverted: #262220;       /* lighter than canvas: elevation moves away from it */
   --surface-action: #e4f222;
+  --surface-primary: #262220;        /* not --color-ink, which is Bone here and would vanish under Paper */
 
   /* ADR-0036 addition, mirrored from the light block */
   color-scheme: dark;
@@ -297,13 +299,11 @@
   --popover: var(--color-surface);
   --popover-foreground: var(--color-ink);
 
-  /* §5 "Pill Button — Primary" is #0c0a08 fill / #ffffff text. --surface-inverted is #1a1919
-     (obsidian) — one step off that fill, but it is the design's own inverted surface AND it
-     stays a dark fill in dark mode (#262220), which is what keeps this pair readable in both
-     themes. --color-ink cannot do that job: in dark it is bone, so a "primary" pill would turn
-     light and the paper-coloured label on it would vanish. FLAGGED for Task 7.2 to confirm
-     against §5 when the Button component is built. */
-  --primary: var(--surface-inverted);
+  /* §5 "Pill Button — Primary" — resolved in Task 7.2, which is what the FLAGGED note here asked for. The
+     fill is now --surface-primary: #0c0a08 in light, exactly the value §5 names, and #262220 in dark, where
+     --color-ink cannot serve because it is Bone there and the paper label would vanish. --surface-inverted
+     (the hero band, #1a1919) was the earlier stand-in — close, but not the colour §5 specifies. */
+  --primary: var(--surface-primary);
   --primary-foreground: var(--color-paper);
 
   --secondary: var(--surface-wash);
