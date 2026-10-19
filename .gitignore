@@ -157,6 +157,11 @@ vite.config.ts.timestamp-*
 # Turbo Repo
 .turbo
 
+# Playwright — run artifacts, never source. `e2e/` is source and stays tracked.
+test-results/
+playwright-report/
+blob-report/
+
 # Reference Data -- real financial exports. `*.xlsx`, not `.xlsx`: the bare form
 # matches only a file literally named ".xlsx" and silently ignores nothing.
 *.xlsx
