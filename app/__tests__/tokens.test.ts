@@ -326,9 +326,10 @@ const TEXT_ON_SURFACE = [
   ["--color-warning", "--color-canvas"],
   ["--color-negative", "--color-canvas"],
   ["--color-sienna", "--surface-insight"],
-  /* §2.9 rule 1 — the primary button's label. --color-panel is the only ink that is dark in BOTH
-     themes (14.22:1 light, 12.78:1 dark); reading the rule literally and reaching for --color-ink
-     gives 1.10:1 in dark, which is why this pair is asserted rather than left to prose. */
+  /* §2.9 rule 1 — the primary button's label, now that the rule names its token. --color-on-action is
+     #0c0a08 in both themes (16.02:1); --color-panel also passes (14.22 / 12.78) and stays asserted so a
+     future remap back to it cannot regress silently. */
+  ["--color-on-action", "--surface-action"],
   ["--color-panel", "--surface-action"],
   /* Status chips: the semantic colour on its own wash. Worst pair is light warning at 4.65:1. */
   ["--color-positive", "--wash-positive"],
@@ -475,5 +476,41 @@ describe("no raw colour in a component (§11: components read the semantic layer
       );
 
     expect(offenders).toEqual([]);
+  });
+});
+
+describe("the focus ring is visible on what it is drawn on (§2.8, §9)", () => {
+  /* The ring is drawn OUTSIDE the element (`outline-offset`), so it lands on the canvas or on a card —
+     never on the control's own ink. These are the two backgrounds it actually meets. */
+  const BEHIND_THE_RING = ["--color-canvas", "--color-surface"];
+
+  for (const [theme, block] of [
+    ["light", light],
+    ["dark", dark],
+  ] as const) {
+    it(`clears 3:1 against the canvas and a card in ${theme}`, () => {
+      const below = BEHIND_THE_RING.map((background) => ({
+        pair: `--color-focus-ring on ${background}`,
+        ratio: contrast(
+          hexOf(block["--color-focus-ring"], "--color-focus-ring"),
+          hexOf(block[background], background),
+        ),
+      })).filter(({ ratio }) => ratio < 3);
+
+      expect(below).toEqual([]);
+    });
+  }
+
+  it("is ink in light and the accent in dark, which is the whole of the fix", () => {
+    expect(hexOf(light["--color-focus-ring"], "--color-focus-ring")).toBe("#0c0a08");
+    expect(hexOf(dark["--color-focus-ring"], "--color-focus-ring")).toBe("#e4f222");
+  });
+
+  it("pins why: the accent alone cannot be the ring in light", () => {
+    const accentOnCanvas = contrast(
+      hexOf(light["--color-highlighter"], "--color-highlighter"),
+      hexOf(light["--color-canvas"], "--color-canvas"),
+    );
+    expect(accentOnCanvas).toBeLessThan(3);
   });
 });

@@ -11,7 +11,10 @@
      3. a second @theme block declares the four semantic aliases §11's @theme omits
         (--color-canvas, --color-surface, --color-panel, --color-skeleton). Without them
         Tailwind generates no bg-canvas / bg-surface utility at all, and a component writing
-        one would silently render unstyled rather than fail.
+        one would silently render unstyled rather than fail;
+        4. a §2.8 focus block at the end of the Base section, which §11 does not carry because §2.8
+        specifies it as CSS rather than as tokens. It reads --color-focus-ring, and it is here
+        rather than per-component so no screen can forget it (Task 7.1b).
 
    Components read the semantic layer — --color-canvas, --color-surface, --color-panel,
    --color-ink, --color-ash, --surface-*, --wash-* — never the raw swatch names.
@@ -71,6 +74,8 @@
   --color-ash-on-panel: #9e9891;
   --color-positive-on-panel: #66d19b;
   --color-negative-on-panel: #ff9d95;
+  --color-on-action: #0c0a08;      /* §2.9 rule 1 — the accent's ink, and the only name for it */
+  --color-focus-ring: #0c0a08;     /* §2.8 — the ring lands on the canvas/card, so it follows the theme */
 
   /* Surfaces */
   --surface-canvas: #f4f2f0;
@@ -173,6 +178,8 @@
   --color-ash-on-panel: #9e9891;
   --color-positive-on-panel: #66d19b;
   --color-negative-on-panel: #ff9d95;
+  --color-on-action: #0c0a08;      /* unchanged — the accent does not change, so its ink does not either */
+  --color-focus-ring: #e4f222;     /* §2.8 — on the dark canvas ink would be 1.10:1; the accent is the readable ring */
 
   --color-smoke: #423b36;           /* alias of --color-skeleton: one role, and every name must resolve in both themes */
 
@@ -230,6 +237,8 @@
   --color-ash-on-panel: #9e9891;
   --color-positive-on-panel: #66d19b;
   --color-negative-on-panel: #ff9d95;
+  --color-on-action: #0c0a08;
+  --color-focus-ring: #0c0a08;
 
   --font-sans: var(--font-inter, 'Inter'), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-source-serif, 'Source Serif 4'), ui-serif, Georgia, serif;
@@ -304,7 +313,7 @@
 
   /* The accent is action-only (§3) and stays scarce. */
   --accent: var(--surface-action);
-  --accent-foreground: var(--color-panel);   /* text on the highlighter stays dark in both themes (§2.9 rule 1) */
+  --accent-foreground: var(--color-on-action);   /* §2.9 rule 1: the accent's ink, dark in both themes. --color-panel also passed (14.22/12.78) but it is a surface token that merely happens to be dark; --color-ink is the trap at 1.10:1 in dark */
 
   /* §3 scopes --color-negative to status, and §5 has no destructive *button* (destructive
      actions are text-only, in --color-negative). So this pair is mapped but unexercised;
@@ -314,7 +323,7 @@
 
   --border: var(--color-hairline);
   --input: var(--color-hairline);
-  --ring: var(--color-highlighter);   /* §2.8 puts the focus ring on the accent, not on ink */
+  --ring: var(--color-focus-ring);   /* §2.8: theme-aware, because the accent alone is 1.10:1 on bone */
 }
 
 @theme inline {
@@ -352,6 +361,18 @@ body {
   background: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-sans);
+}
+
+/* §2.8 — focus is always visible. The ring is drawn OUTSIDE the border box (`outline-offset`), so it
+   lands on the canvas or a card and never on the control's own ink: chartreuse alone measures 1.10:1
+   there, against §9's and WCAG 1.4.11's 3:1 for a focus indicator. `--color-focus-ring` therefore
+   follows the theme — ink in light (17.70:1 on canvas, 19.76:1 on a card), the accent in dark
+   (15.16:1 / 13.89:1). §2.8's prose about the accent doing accessibility work is still true; it is
+   true *against ink*, which is not what a ring around a control is drawn on. */
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: inherit;
 }
 
 /* §2.3: "Tabular figures are mandatory on every number that can change or align. Money, dates,
