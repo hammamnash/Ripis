@@ -66,10 +66,14 @@ describe('Task 3.11 — what the source may not contain', () => {
     //   create-wallet.ts  — states it once at birth; a wallet with no transactions holds its opening balance
     //   serialise.ts      — reads it to send it on the wire
     //   remove-wallet.ts  — reads it into the audit row for a deletion, so the figure is recorded as it was
+    //   wallet-summary.ts — reads it to state what the wallets are worth; net worth is the sum of these
+    //                       columns, and recomputing it by walking every wallet's transactions would be a
+    //                       second arithmetic path for a figure that already has one (ADR-0025, ADR-0059)
     //   money/direction.ts — names it in the comment that explains what `value` is measured against
     expect(mentioning).toEqual(
       [
         join('src', 'server', 'money', 'direction.ts'),
+        join('src', 'server', 'reports', 'wallet-summary.ts'),
         join('src', 'server', 'wallets', 'balance.ts'),
         join('src', 'server', 'wallets', 'create-wallet.ts'),
         join('src', 'server', 'wallets', 'remove-wallet.ts'),
