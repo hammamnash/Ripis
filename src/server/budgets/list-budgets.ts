@@ -1,7 +1,7 @@
 import { Prisma } from '@prisma/client';
 
+import { primaryCurrency } from '../currency';
 import { db } from '../db';
-import { primaryCurrency } from '../reports/filter';
 import type { BudgetMonth } from './month';
 import { BUDGET_INCLUDE, type BudgetWithCategory } from './serialise';
 import { budgetBars, spendByCategory, type BudgetBarResponse } from './usage';
@@ -27,10 +27,11 @@ export interface MonthBudgets {
  * reads as a change that did not happen.
  */
 export async function readMonthBudgets(month: BudgetMonth): Promise<MonthBudgets> {
-  // `primaryCurrency` is the reports layer's read of `User.primary_currency_id`, and it is reused rather
+  // `primaryCurrency` is the one read of `User.primary_currency_id` (Task 7.0), and it is reused rather
   // than rewritten: it names the row it means, which is the whole point of it (ADR-0043 — `User` is not one
   // of the models the scoping extension narrows, so an unfiltered read returns whoever the database offers
-  // first). A second copy of that read would be a second chance to forget it.
+  // first). There were three copies of that read before Task 7.0 and two of them had already drifted apart
+  // on the error they throw — so a fourth would be the third chance to forget it.
   const currency = await primaryCurrency();
 
   const budgets = await db.budget.findMany({

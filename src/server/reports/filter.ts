@@ -1,7 +1,5 @@
 import type { CategoryType, Prisma, TxType } from '@prisma/client';
 
-import { currentCaller } from '../context';
-import { db } from '../db';
 import { ApiError } from '../http/errors';
 import { addDays, calendarDate, firstOfMonth, monthWindow, parseCalendarDate } from '../time/calendar-date';
 
@@ -175,34 +173,6 @@ export function reportWhere(
   }
 
   return where;
-}
-
-/**
- * The caller's primary currency, read from their own row.
- *
- * `User` is not one of the models the scoping extension narrows (ADR-0043 — a caller is established *by*
- * looking one up), so this read names the id explicitly. An unfiltered `findFirst` returns whichever row
- * the database offers first — the administrator's account, with a different primary currency — and the
- * report then sums nothing and returns a period of zeroes. That is exactly how the mistake was caught the
- * first time, in `month-summary.ts`, by a spec that ran after another file had created a second account.
- */
-export async function primaryCurrency(): Promise<string> {
-  const caller = currentCaller();
-  if (caller === undefined) {
-    // Unreachable through a route — `withCaller` establishes the context — and stated rather than
-    // asserted so the module's contract is "runs as somebody" rather than "assumes somebody".
-    throw new ApiError('unauthenticated', 401, 'A report is read as an account.');
-  }
-
-  const user = await db.user.findUnique({
-    where: { id: caller.id },
-    select: { primary_currency_id: true },
-  });
-  if (user === null) {
-    throw new ApiError('not_found', 404, 'No such account.');
-  }
-
-  return user.primary_currency_id;
 }
 
 function parseWindow(query: ReportQuery): Window {

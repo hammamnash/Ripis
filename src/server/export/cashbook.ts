@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs';
 
 import { writeAudit } from '../audit';
 import type { Caller } from '../context';
+import { primaryCurrencyOf } from '../currency';
 import { db } from '../db';
 import { money } from '../money/amount';
 import { parseCalendarDate } from '../time/calendar-date';
@@ -201,22 +202,6 @@ export function cashbookEntries(
   }
 
   return entries;
-}
-
-/** The ledger's primary currency, which heads column 6. */
-async function primaryCurrencyOf(actor: Caller): Promise<string> {
-  // `User` sits outside the scoping extension, so this read names the row it means rather than relying on a
-  // filter that is not there (ADR-0043).
-  const user = await db.user.findUnique({
-    where: { id: actor.id },
-    select: { primary_currency_id: true },
-  });
-
-  if (user === null) {
-    throw new Error('the exporting user is not in the database');
-  }
-
-  return user.primary_currency_id;
 }
 
 export async function exportCashbook(actor: Caller, range: ExportRange): Promise<ExportedFile> {

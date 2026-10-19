@@ -5,7 +5,8 @@ import { ApiError } from '../http/errors';
 import { money } from '../money/amount';
 import { changeBetween, type Change } from '../money/change';
 import { addDays, calendarDate } from '../time/calendar-date';
-import { oneOf, parseReportFilter, previousWindow, primaryCurrency, reportWhere, type ReportQuery } from './filter';
+import { primaryCurrency } from '../currency';
+import { oneOf, parseReportFilter, previousWindow, reportWhere, type ReportQuery } from './filter';
 
 const KINDS: readonly CategoryType[] = ['expense', 'income'];
 

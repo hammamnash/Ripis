@@ -3,7 +3,8 @@ import { Prisma, type TxType } from '@prisma/client';
 import { db } from '../db';
 import { money } from '../money/amount';
 import { addDays, calendarDate } from '../time/calendar-date';
-import { parseReportFilter, primaryCurrency, reportWhere, wholeMonthOf, type ReportQuery } from './filter';
+import { primaryCurrency } from '../currency';
+import { parseReportFilter, reportWhere, wholeMonthOf, type ReportQuery } from './filter';
 
 /**
  * A period's income, expense and net (FR-11, Task 3.9).

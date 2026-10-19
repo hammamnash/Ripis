@@ -1,6 +1,7 @@
 import { writeAudit } from '../audit';
 import { createCategory } from '../categories/create-category';
 import type { Caller } from '../context';
+import { primaryCurrencyOf } from '../currency';
 import { db } from '../db';
 import { ApiError } from '../http/errors';
 import { createTransaction } from '../transactions/create-transaction';
@@ -101,18 +102,6 @@ function decodeUpload(contentBase64: string): Buffer {
   }
 
   return buffer;
-}
-
-/** The ledger's primary currency, which column 6 of the file has to agree with. */
-async function primaryCurrencyOf(actor: Caller): Promise<string> {
-  // `User` is outside the scoping extension, so this read names the row it means (ADR-0043).
-  const user = await db.user.findUnique({ where: { id: actor.id }, select: { primary_currency_id: true } });
-
-  if (user === null) {
-    throw new ApiError('not_found', 404, 'No such account.');
-  }
-
-  return user.primary_currency_id;
 }
 
 interface Resolved {
