@@ -63,6 +63,15 @@
   --wash-warning: #fdf0dd;
   --wash-negative: #fbe9e7;
 
+  /* On the inverted panel (§2.9 rule 4) — theme-fixed on purpose: the panel is dark in BOTH themes,
+     so these deliberately do not follow the theme. The light set cannot carry text on a dark panel
+     (ash 3.35:1, positive 2.48:1, negative 2.38:1 — all under §9's 4.5:1 floor), so the panel carries
+     the dark set's values in both themes: 6.14:1 / 9.32:1 / 8.78:1 in light, 5.52:1 / 8.38:1 / 7.89:1
+     in dark. Text on the panel uses THESE names, never --color-ash / --color-positive / --color-negative. */
+  --color-ash-on-panel: #9e9891;
+  --color-positive-on-panel: #66d19b;
+  --color-negative-on-panel: #ff9d95;
+
   /* Surfaces */
   --surface-canvas: #f4f2f0;
   --surface-card: #ffffff;
@@ -158,6 +167,13 @@
   --color-wash-warning: #2b2412;
   --color-wash-negative: #2e1a18;
 
+  /* §2.9 rule 4: the panel is dark in both themes, so it carries these same three values in both.
+     They are repeated here rather than left to inherit because every colour-role token must resolve
+     in both blocks — and identical strings in the two blocks is the point, not an oversight. */
+  --color-ash-on-panel: #9e9891;
+  --color-positive-on-panel: #66d19b;
+  --color-negative-on-panel: #ff9d95;
+
   --color-smoke: #423b36;           /* alias of --color-skeleton: one role, and every name must resolve in both themes */
 
   /* Chart series (§4). The order inverts in dark: prominence means furthest from the canvas */
@@ -208,6 +224,12 @@
   --color-wash-positive: #e6f2ea;
   --color-wash-warning: #fdf0dd;
   --color-wash-negative: #fbe9e7;
+
+  /* §2.9 rule 4 — so Tailwind generates text-ash-on-panel, text-positive-on-panel and
+     text-negative-on-panel. Same values as both blocks above: the panel's set does not follow the theme. */
+  --color-ash-on-panel: #9e9891;
+  --color-positive-on-panel: #66d19b;
+  --color-negative-on-panel: #ff9d95;
 
   --font-sans: var(--font-inter, 'Inter'), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-source-serif, 'Source Serif 4'), ui-serif, Georgia, serif;
