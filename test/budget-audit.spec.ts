@@ -22,9 +22,10 @@ const AUDIT_ACTIONS = [
   'signed_in',
   'auth_failed',
   'password_changed',
+  'imported',
 ] as const;
 
-const AUDIT_ENTITIES = ['transaction', 'wallet', 'budget', 'category', 'user', 'auth', 'export'] as const;
+const AUDIT_ENTITIES = ['transaction', 'wallet', 'budget', 'category', 'user', 'auth', 'export', 'import'] as const;
 
 /**
  * Task 1.5 — `Budget` and `AuditLog` (FR-10, FR-14).

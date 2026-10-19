@@ -255,6 +255,7 @@ enum AuditEntity {
   user
   auth
   export
+  import
 }
 
 enum AuditAction {
@@ -267,6 +268,7 @@ enum AuditAction {
   signed_in
   auth_failed
   password_changed
+  imported
 }
 
 /// One row per sign-in (ADR-0040). The refresh token is the only credential a user can kill on demand,
