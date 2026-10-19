@@ -8,13 +8,20 @@
      1. the two font tokens gain a var() indirection — next/font gives the family a generated
         name, so a literal 'Inter' would never resolve to the font that actually loads;
      2. color-scheme joins each theme block, so native controls and scrollbars follow the theme;
-     3. a second @theme block declares the four semantic aliases §11's @theme omits
-        (--color-canvas, --color-surface, --color-panel, --color-skeleton). Without them
-        Tailwind generates no bg-canvas / bg-surface utility at all, and a component writing
-        one would silently render unstyled rather than fail;
+     3. a second @theme block declares the semantic aliases §11's @theme omits (--color-canvas,
+        --color-surface, --color-panel, --color-skeleton, plus the three --color-wash-*). Without
+        the first four Tailwind generates no bg-canvas / bg-surface utility at all, and a component
+        writing one would silently render unstyled rather than fail. The wash trio is the §2.9
+        repair: §11 block 1 mirrors them as light hexes, so the utility ignored the dark block's
+        --wash-positive and would paint a light chip on a dark canvas;
         4. a §2.8 focus block at the end of the Base section, which §11 does not carry because §2.8
         specifies it as CSS rather than as tokens. It reads --color-focus-ring, and it is here
-        rather than per-component so no screen can forget it (Task 7.1b).
+        rather than per-component so no screen can forget it (Task 7.1b);
+        5. a third @theme block for the four token families §11 declares only in :root — weight,
+        leading, tracking and duration. Tailwind v4 generates a utility only from an @theme name,
+        so without that block `font-regular` in the committed Button and every `duration-*` the
+        shell writes compiled to nothing at all (0 rules in the built CSS, verified by reading it,
+        Task 7.2a);
 
    Components read the semantic layer — --color-canvas, --color-surface, --color-panel,
    --color-ink, --color-ash, --surface-*, --wash-* — never the raw swatch names.
@@ -266,14 +273,70 @@
   --shadow-overlay: 0 8px 40px rgba(12,10,8,0.14), 0 0 0 1px rgba(12,10,8,0.05);
 }
 
-/* ADR-0036 addition: the four semantic aliases §11's @theme leaves out, at their light values.
+/* ADR-0036 addition: the semantic aliases §11's @theme leaves out, at their light values.
    Tailwind resolves `bg-canvas` to var(--color-canvas), and the dark block overrides that
-   variable at higher specificity, so these utilities follow the theme like everything else. */
+   variable at higher specificity, so these utilities follow the theme like everything else.
+
+   Task 7.2a re-declares the three `--color-wash-*` names here. §11 block 1 mirrors them as LIGHT
+   hexes (#e6f2ea …), which is correct for the mirror but means `bg-wash-positive` ignored the
+   dark block's `--wash-positive: #16261e` and would paint a light chip on the dark canvas — the
+   exact §2.9 failure ("a dark colour is not a light colour inverted"). Pointing the colour alias
+   at the `--wash-*` name instead makes the utility follow the theme. A later declaration in the
+   same @theme wins, so block 1 keeps its literal §11 mirror and this one supplies the behaviour.
+
+   `--surface-insight` / `--surface-inverted` / `--surface-action` are deliberately NOT aliased
+   yet: no component uses `bg-insight`, and the dark block re-derives the `--surface-*` names
+   without a `--color-` counterpart, so adding the alias now would fail the theme-parity assertion
+   for a utility nothing renders. Add the pair together when the first screen needs one. */
 @theme {
   --color-canvas: #f4f2f0;
   --color-surface: #ffffff;
   --color-panel: #1a1919;
   --color-skeleton: #d3d3d3;
+  --color-wash-positive: var(--wash-positive);
+  --color-wash-negative: var(--wash-negative);
+  --color-wash-warning: var(--wash-warning);
+}
+
+/* ADR-0036 addition 4 — the token families §11's @theme omits, found by compiling rather than by
+   reading. Tailwind v4 generates a utility ONLY from a name inside @theme; a name that lives in
+   :root alone is a plain custom property with no class attached. §11 declares weight, leading,
+   tracking and duration in :root, so `font-regular` in the committed Button, `leading-body-lg`,
+   `tracking-micro` and `duration-240` all compiled to NOTHING — the pill rendered at the browser's
+   default 400 by luck, and a 240ms sheet entry was 0ms. This block is the repair: it mirrors those
+   four families so the classes the components already write actually exist.
+
+   `--ease-out` is deliberately NOT mirrored: Tailwind already ships `ease-out`, and §11's value
+   (cubic-bezier(0.22, 1, 0.36, 1)) is not the builtin's (0, 0, 0.2, 1). Mirroring it would silently
+   redefine a utility that appears in third-party CSS as well. Components that need §2.7's curve
+   write `ease-[var(--ease-out)]`.
+
+   `--tracking-tight` / `--tracking-tighter` DO collide with builtins of the same name and are
+   mirrored anyway: §11 is the contract, its values differ from Tailwind's by 0.005em, and a
+   component writing `tracking-tight` must get the design's value, not the framework's. */
+@theme {
+  --font-weight-regular: 400;
+  --font-weight-w450: 450;
+  --font-weight-medium: 500;
+
+  --leading-micro: 1.45;
+  --leading-caption: 1.45;
+  --leading-small: 1.45;
+  --leading-body: 1.5;
+  --leading-body-lg: 1.4;
+  --leading-subheading: 1.3;
+  --leading-heading-sm: 1.2;
+  --leading-heading: 1.15;
+  --leading-figure: 1.05;
+  --leading-display: 1;
+
+  --tracking-tight: -0.02em;
+  --tracking-tighter: -0.03em;
+  --tracking-micro: 0.02em;
+
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-sheet: 240ms;
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -302,7 +365,9 @@
   /* §5 "Pill Button — Primary" — resolved in Task 7.2, which is what the FLAGGED note here asked for. The
      fill is now --surface-primary: #0c0a08 in light, exactly the value §5 names, and #262220 in dark, where
      --color-ink cannot serve because it is Bone there and the paper label would vanish. --surface-inverted
-     (the hero band, #1a1919) was the earlier stand-in — close, but not the colour §5 specifies. */
+     (the hero band, #1a1919) was the earlier stand-in — close, but not the colour §5 specifies.
+     Verified in Task 7.2a against §5's own sentence ("In dark the fill is #262220 and the label stays
+     Paper"), which --color-paper satisfies in both themes. */
   --primary: var(--surface-primary);
   --primary-foreground: var(--color-paper);
 
@@ -315,9 +380,12 @@
   --accent: var(--surface-action);
   --accent-foreground: var(--color-on-action);   /* §2.9 rule 1: the accent's ink, dark in both themes. --color-panel also passed (14.22/12.78) but it is a surface token that merely happens to be dark; --color-ink is the trap at 1.10:1 in dark */
 
-  /* §3 scopes --color-negative to status, and §5 has no destructive *button* (destructive
-     actions are text-only, in --color-negative). So this pair is mapped but unexercised;
-     FLAGGED for Task 7.2 rather than left on shadcn's default red, which would be worse. */
+  /* §3 scopes --color-negative to status, and §5 has no destructive *button* — destructive
+     actions are text-only, in --color-negative, never a coloured fill. Resolved in Task 7.2a: this
+     pair is exercised by exactly the two places §5 allows, button.tsx's `destructive` variant
+     (`text-destructive`, no fill) and input.tsx's `aria-invalid:border-destructive` (§5 "Error:
+     border --color-negative"). Nothing in the app paints a destructive *background*, and §5 says
+     nothing should. --destructive-foreground is mapped for completeness only. */
   --destructive: var(--color-negative);
   --destructive-foreground: var(--color-paper);
 
