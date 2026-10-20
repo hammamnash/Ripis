@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+
+import { removeTransaction } from "./actions";
 import { connection } from "next/server";
 
 import { Amount } from "@/components/amount";
@@ -63,6 +65,15 @@ export default async function TransactionDetailPage({ params }: PageProps<"/tran
           <Amount value={transaction.baseAmount} currency={display(transaction.baseCurrencyId)} className="text-caption text-ink" />
         </p>
       </section>
+      <details data-slot="delete-transaction" className="px-4 pb-10">
+        <summary className="cursor-pointer text-caption text-ash">Delete this transaction</summary>
+        <form action={removeTransaction} className="pt-3">
+          <input type="hidden" name="id" value={transaction.id} />
+          <button type="submit" className="h-11 w-full rounded-[12px] border border-hairline text-caption text-ink">
+            Yes, delete it
+          </button>
+        </form>
+      </details>
     </>
   );
 }
