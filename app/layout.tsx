@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
 
 /* §2.3: Inter runs everything; Source Serif 4 appears only on display KPI figures and screen
    titles. Both are free and variable, and both load through next/font (which self-hosts them).
@@ -23,17 +24,22 @@ export const metadata: Metadata = {
   description: "One private, multi-currency ledger.",
 };
 
-/* No data-theme is set here yet, so the light block in globals.css applies. §2.9 wants dark to
-   follow the OS by default with a manual override that beats it — that needs the Settings
-   control and the pre-paint attribute script, which is Task 7.5 (FR-15). The dark block itself
-   ships now, and is reachable by setting data-theme="dark" on <html>. */
+/* §2.9 wants dark to follow the OS by default with a manual override that beats it. The override is
+   a `data-theme` attribute on <html>, written before first paint by ThemeProvider's inline script
+   (Task 7.3.1 — the comment that stood here called it 7.5, which was wrong). `suppressHydrationWarning`
+   is required, and only on this element: the script mutates the attribute before React hydrates, so
+   the server and client markup are expected to disagree about it. It suppresses that one attribute
+   diff, not any other mismatch below it. */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
       className={`${inter.variable} ${sourceSerif.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   );
 }
