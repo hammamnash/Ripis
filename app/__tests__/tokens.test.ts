@@ -16,17 +16,33 @@ import { describe, expect, it } from "vitest";
 
 const CSS_PATH = new URL("../globals.css", import.meta.url);
 const LAYOUT_PATH = new URL("../layout.tsx", import.meta.url);
-const PAGE_PATH = new URL("../page.tsx", import.meta.url);
 
-/* Strip comments from ALL three sources before asserting. The CSS prose quotes `prefers-color-scheme`
-   and a selector; page.tsx's own prose names the banned weight utility it deliberately avoids. An
+/* Task 7.3.5 — the shell is no longer two files in app/, so this file's class scan reads the whole
+   surface instead: every .tsx under app/ and components/. A hand-written list of paths would keep
+   passing while every file added since went unchecked, which is the quiet failure these assertions
+   exist to prevent. Task 7.3 also retired app/page.tsx — the dashboard is app/(app)/page.tsx now,
+   and a stale URL here would have thrown ENOENT rather than testing anything. */
+const APP_DIR = fileURLToPath(new URL("../", import.meta.url));
+const COMPONENTS_DIR = fileURLToPath(new URL("../../components/", import.meta.url));
+
+/* Strip comments from ALL sources before asserting. The CSS prose quotes `prefers-color-scheme` and a
+   selector; the components' prose names the banned weight utilities they deliberately avoid. An
    assertion that a comment can satisfy — or trip — is not testing the code. */
 const stripComments = (source: string) =>
   source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[ \t]*\/\/.*$/gm, "");
 
+function tsxFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return entry.name === "__tests__" ? [] : tsxFiles(path);
+    return entry.name.endsWith(".tsx") ? [path] : [];
+  });
+}
+
 const css = stripComments(readFileSync(CSS_PATH, "utf8"));
 const layout = stripComments(readFileSync(LAYOUT_PATH, "utf8"));
-const page = stripComments(readFileSync(PAGE_PATH, "utf8"));
+const uiFiles = [...tsxFiles(APP_DIR), ...tsxFiles(COMPONENTS_DIR)].sort();
+const ui = stripComments(uiFiles.map((path) => readFileSync(path, "utf8")).join("\n"));
 
 /** Raw text of every block whose selector contains `selector`, braces balanced. */
 function blocks(selector: string): string[] {
@@ -202,9 +218,9 @@ describe("weight ceiling (§2.3: never 600 or 700)", () => {
     expect(weights.length).toBeGreaterThan(0);
   });
 
-  it("uses no banned weight utility in the shell", () => {
+  it("uses no banned weight utility anywhere the shell renders", () => {
     const banned = /\b(font-(semibold|bold|extrabold|black))\b/g;
-    expect([...`${page}${layout}`.matchAll(banned)].map((m) => m[0])).toEqual([]);
+    expect([...ui.matchAll(banned)].map((m) => m[0])).toEqual([]);
   });
 });
 
@@ -251,11 +267,20 @@ describe("the shell uses only tokens that exist (no silent no-op classes)", () =
     "font-thin", "font-extralight", "font-light", "font-normal", "font-medium",
     "font-sans", "font-serif", "font-mono",
     "bg-transparent", "border-none",
+    /* A border SIDE is geometry, not a colour — `border-b` names no token and takes its colour from
+       whatever `border-*` colour the element also carries. Widening this scan to components/ is what
+       surfaced them: every shadcn file had been out of scope since the check was written. */
+    "border-b", "border-t", "border-l", "border-r", "border-x", "border-y", "border-s", "border-e",
+    "border-collapse", "border-separate", "border-transparent", "border-current",
   ]);
 
+  /* Every quoted string in every component, not just `className="…"`. Most of the shell composes its
+     classes through `cn()`, so a scan that only looked inside the className attribute would have
+     examined a handful of the strings and reported success over the rest. Prose is already stripped
+     above, so what is left is markup and class arguments. */
   const classNames: string[] = [];
-  for (const [, attribute] of `${page}${layout}`.matchAll(/className="([^"]+)"/g)) {
-    if (attribute) classNames.push(...attribute.split(/\s+/).filter(Boolean));
+  for (const [, quoted] of ui.matchAll(/"([^"\n]+)"/g)) {
+    if (quoted) classNames.push(...quoted.split(/\s+/).filter(Boolean));
   }
   const tokenish = classNames.filter(
     (c) => /^(text|bg|border|rounded|font|tracking|leading)-/.test(c) && !c.includes("["),
@@ -267,19 +292,47 @@ describe("the shell uses only tokens that exist (no silent no-op classes)", () =
 
   it("names a token in @theme for every token-ish class", () => {
     const themeKeys = new Set([...Object.keys(themeMirror), ...Object.keys(themeInline)]);
+
+    /* `bg-panel/60` is `bg-panel` at 60% — the modifier is an opacity, not part of the token name.
+       `rounded-t-card` puts the corner between the utility and the token. Both shapes were already in
+       the shadcn files and both read as "unresolved" until this scan saw them. */
+    const resolves = (raw: string): boolean => {
+      const c = raw.replace(/\/\d+$/, "");
+      const rest = c.replace(/^(color|text|bg|border|rounded|font|tracking|leading)-/, "");
+      const cornerless = rest.replace(/^(?:tl|tr|bl|br|t|b|l|r|s|e)-/, "");
+      const candidates = [`--${c}`, `--color-${rest}`, `--text-${rest}`, `--font-${rest}`];
+      candidates.push(
+        /* `font-w450` is generated from `--font-weight-w450`, not `--font-w450` — the font-weight
+           namespace was missing from this check, which is why §2.3's 450 would have read as a typo
+           the first time a component used it. */
+        `--font-weight-${rest}`,
+        `--radius-${rest}`,
+        `--radius-${cornerless}`,
+        `--leading-${rest}`,
+        `--tracking-${rest}`,
+      );
+      return candidates.some((name) => themeKeys.has(name));
+    };
+
     const unresolved = [...new Set(tokenish)]
       .filter((c) => !TAILWIND_BUILTIN.has(c))
-      .filter((c) => {
-        const rest = c.replace(/^(color|text|bg|border|rounded|font|tracking|leading)-/, "");
-        return !(
-          themeKeys.has(`--${c}`) ||
-          themeKeys.has(`--color-${rest}`) ||
-          themeKeys.has(`--text-${rest}`) ||
-          themeKeys.has(`--font-${rest}`) ||
-          themeKeys.has(`--radius-${rest}`)
-        );
-      });
+      .filter((c) => !resolves(c));
     expect(unresolved).toEqual([]);
+  });
+});
+
+describe("the rail is V1 only (§7: Recurring is a V1.1 screen)", () => {
+  const tabBar = stripComments(
+    readFileSync(new URL("../../components/shell/tab-bar.tsx", import.meta.url), "utf8"),
+  );
+
+  it("offers exactly the five screens V1 ships, in order", () => {
+    const labels = [...tabBar.matchAll(/label:\s*"([^"]+)"/g)].map((m) => m[1]);
+    expect(labels).toEqual(["Dashboard", "Transactions", "Budgets", "Wallets", "Settings"]);
+  });
+
+  it("carries no Recurring entry", () => {
+    expect(tabBar).not.toMatch(/recurring/i);
   });
 });
 
