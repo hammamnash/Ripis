@@ -1,5 +1,7 @@
 import { defineConfig } from '@playwright/test';
 
+import { E2E_STORAGE_STATE } from './e2e/helpers';
+
 /**
  * The browser harness Task 7.2 promised and the mockup probes stood in for. It lives outside
  * `npm run gate` on purpose: the gate must stay runnable without a built app or a browser.
@@ -17,6 +19,8 @@ import { defineConfig } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './e2e',
+  /* The fixture account the guard makes necessary. Runs before the first browser opens. */
+  globalSetup: './e2e/global-setup.ts',
   /* Serial because the assertions are cheap and a single browser keeps the failure output readable;
      there is no shared database to serialise for at this point. */
   fullyParallel: false,
@@ -43,7 +47,18 @@ export default defineConfig({
   /* Channel `chrome`, not Playwright's bundled Chromium: this machine already has Google Chrome, so
      the harness runs without a ~150MB browser download per Playwright upgrade. The assertions are
      about computed colour and geometry, which every Chromium build answers identically. */
-  projects: [{ name: 'chromium', use: { browserName: 'chromium', channel: 'chrome' } }],
+  /* Two projects, ordered. `auth` signs in through the form and writes the cookie jar; `chromium` starts from
+     it. Task 7.4 made this mandatory rather than tidy: the `(app)` frame redirects an unauthenticated browser
+     to `/sign-in`, so a spec that navigated to `/` without a session would measure the sign-in screen. */
+  projects: [
+    { name: 'auth', testMatch: /auth\.setup\.ts/, use: { browserName: 'chromium', channel: 'chrome' } },
+    {
+      name: 'chromium',
+      use: { browserName: 'chromium', channel: 'chrome', storageState: E2E_STORAGE_STATE },
+      dependencies: ['auth'],
+      testIgnore: /auth\.setup\.ts/,
+    },
+  ],
 
   /* Port 3100, not 3000: a `next dev` the developer already has open must not be mistaken for the
      build under test, and the reuse-existing flag is deliberately absent for the same reason — a

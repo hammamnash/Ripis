@@ -1,6 +1,37 @@
 import type { Page } from '@playwright/test';
 
 /**
+ * The account the browser harness signs in as.
+ *
+ * Created by `global-setup.ts` against the real database before the first spec runs, because the suite tests
+ * a guard: every assertion in `shell.spec.ts` and `theming.spec.ts` is made against a signed-in browser now,
+ * and a fixture account is the only way to reach the screens they measure without a human typing a password.
+ *
+ * The password is a constant in the repo, which is fine and is worth stating: this account exists only on a
+ * developer's machine, holds no ledger, and the suite creates it on every run — it is a fixture, not a
+ * credential. If this suite ever runs somewhere that matters, that is a decision to revisit.
+ */
+export const E2E_ACCOUNT = { email: 'e2e-spec@ripis.test', password: 'e2e-spec-password' } as const;
+
+/** Where `auth.setup.ts` leaves the cookie jar, and where the `chromium` project picks it up. */
+export const E2E_STORAGE_STATE = 'e2e/.auth/session.json';
+
+/**
+ * Sign in the way a person does — through the screen, not by minting a cookie.
+ *
+ * The alternative (write a session row and a cookie directly) would be faster and would prove less: this
+ * exercises the form, the route, the rate limiter, `Set-Cookie` and the guard's acceptance of what the route
+ * set. If any of those five is wrong, every spec in the suite fails at the same place and says so.
+ */
+export async function signInThroughForm(page: Page) {
+  await page.goto('/sign-in');
+  await page.getByLabel('Email').fill(E2E_ACCOUNT.email);
+  await page.getByLabel('Password').fill(E2E_ACCOUNT.password);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.waitForURL((url) => url.pathname === '/');
+}
+
+/**
  * Shared measurement for the e2e suite.
  *
  * Task 7.2 wrote `setTheme` inside `theming.spec.ts`; Task 7.3 is the second spec to need it, and the

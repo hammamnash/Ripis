@@ -3,6 +3,7 @@ import { MonthSelector } from "@/components/month-selector";
 import { ShellHeader } from "@/components/shell/header";
 import { calendarDate } from "@/src/server/time/calendar-date";
 import { Receipt } from "lucide-react";
+import { connection } from "next/server";
 
 /*
  * Screen 2 (§7). The list, filters and search arrive in Task 7.4b; what lands now is the month
@@ -15,6 +16,11 @@ import { Receipt } from "lucide-react";
  * "today" (UTC, ADR-0007).
  */
 export default async function TransactionsPage({ searchParams }: PageProps<"/transactions">) {
+  /* Request data, twice over: `searchParams` and the fallback month, which is whatever month it is now. Next
+     still attempted a prerender pass here and logged `unstable value new Date()` for every navigation to this
+     screen — the frame declares `connection()` for itself, and a page has to say it for its own reads. */
+  await connection();
+
   const params = await searchParams;
   const requested = typeof params.month === "string" ? params.month : undefined;
   const month =

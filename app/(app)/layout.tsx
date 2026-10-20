@@ -3,6 +3,8 @@ import { TabBar } from "@/components/shell/tab-bar";
 import { Toaster } from "@/components/ui/sonner";
 import { connection } from "next/server";
 
+import { requireScreenSession } from "../../src/server/auth/require-screen";
+
 /* Every screen under this frame reads per-user data, so none of them is prerenderable, and Next 16
    says so twice on the same page:
      - `searchParams` (Transactions' month) is a blocking read: "encountered uncached or runtime data
@@ -31,13 +33,17 @@ export const instant = false;
  * on the one device family that has one, and without the 32px it is flush against the bar with the
  * FAB sitting on top of it (§6's 32px section gap).
  *
- * There is no session guard here, deliberately, and Task 7.4g closes it. Doors (screen 14) does not
- * exist yet, so a redirect would have nowhere to go, and the geometry suite could not measure a
- * single screen without a database and a login. The shell is presentational; the guard lands with
- * the screen that can receive it.
+ * The guard runs here, once, for all five tabs, and it is the reason this file imports a server module:
+ * `requireScreenSession()` resolves the `ripis_session` cookie through `findLiveSession` and redirects to
+ * `/sign-in` when there is no live session (Task 7.4). It belongs on the frame rather than on each page
+ * because the frame is what renders the tab bar — a signed-out browser must never see a bar it can tap
+ * through. Pages that need the caller call the same helper themselves: a layout's return value is not
+ * something a page can read, and passing it through React context would put a server-only credential in a
+ * client boundary.
  */
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   await connection();
+  await requireScreenSession();
 
   return (
     <div className="flex min-h-dvh flex-col">

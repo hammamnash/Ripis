@@ -37,6 +37,13 @@ export interface SignInResult {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
+  /**
+   * The session the tokens belong to. Not part of `§6.1`'s response: `POST /api/auth/login` takes it out of
+   * the body and puts it in the `ripis_session` cookie instead, because a server component can read a cookie
+   * and cannot read a header (Task 7.4). It is additive here rather than decoded back out of the access token,
+   * which would mean verifying a token this function signed two lines earlier.
+   */
+  sessionId: string;
   user: SignedInUser;
 }
 
@@ -75,6 +82,7 @@ export async function signIn(
     accessToken,
     refreshToken: session.refreshToken,
     expiresIn: config.accessTtlSeconds,
+    sessionId: session.sessionId,
     user: {
       id: user.id,
       name: user.name,
