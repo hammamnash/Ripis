@@ -2,11 +2,13 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 
 import { Amount } from "@/components/amount";
+import { ReconcileForm } from "@/components/reconcile-form";
 import { ShellHeader } from "@/components/shell/header";
 import type { CurrencyDisplay } from "@/src/lib/display-money";
 import { requireScreenSession } from "@/src/server/auth/require-screen";
 import { runAsCaller } from "@/src/server/context";
 import { db } from "@/src/server/db";
+import { calendarDate } from "@/src/server/time/calendar-date";
 import { getWallet } from "@/src/server/wallets/list-wallets";
 
 const LABELS: Record<string, string> = {
@@ -44,7 +46,7 @@ export default async function WalletDetailPage({ params }: { params: Promise<{ i
           category_id: true,
         },
       }),
-      db.category.findMany({ where: { archived_at: null }, select: { id: true, name: true } }),
+      db.category.findMany({ where: { archived_at: null }, select: { id: true, name: true, type: true } }),
       db.currency.findMany({ select: { code: true, symbol: true, suffix: true, minor_unit: true } }),
     ]);
 
@@ -83,6 +85,19 @@ export default async function WalletDetailPage({ params }: { params: Promise<{ i
             className="text-subheading text-ink"
           />
         </section>
+
+        {/* §7 screen 8 composed into screen 7, which lists "reconciliation" as part of it. The form
+            takes the figure getWallet already projected — never the stored column — so the screen
+            reconciles against the same number it shows. */}
+        <ReconcileForm
+          walletId={wallet.id}
+          walletName={wallet.name}
+          isLiability={wallet.isLiability}
+          recordedBalance={wallet.currentBalance}
+          currency={display(wallet.currencyId)}
+          categories={data.categories}
+          today={calendarDate(new Date())}
+        />
 
         <section data-slot="wallet-ledger" className="flex flex-col gap-2">
           <h2 className="text-caption uppercase text-ash">Last 20 entries</h2>
