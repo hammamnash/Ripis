@@ -44,12 +44,19 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
   const requestedPage = typeof params.page === "string" ? Number(params.page) : 1;
   const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
 
+  const pick = (key: string): string => (typeof params[key] === "string" ? String(params[key]) : "");
+  const filters = { type: pick("type"), wallet: pick("wallet"), category: pick("category") };
+  const activeFilters = Boolean(filters.type || filters.wallet || filters.category);
+
   const data = await runAsCaller(caller, async () => {
     const [listed, wallets, categories, currencies] = await Promise.all([
       listTransactions({
         from: `${month}-01`,
         to: `${month}-${lastDayOf(month)}`,
         page,
+        type: filters.type || undefined,
+        walletId: filters.wallet || undefined,
+        categoryId: filters.category || undefined,
         perPage: MAX_PER_PAGE,
       }),
       db.wallet.findMany({ where: { deleted_at: null }, select: { id: true, name: true } }),
@@ -82,6 +89,34 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
       <ShellHeader title="Transactions">
         <MonthSelector month={month} basePath="/transactions" />
       </ShellHeader>
+
+      <form data-slot="transaction-filters" method="get" action="/transactions" className="flex flex-wrap items-center gap-2 px-4 pb-4">
+        <input type="hidden" name="month" value={month} />
+        <select name="type" defaultValue={filters.type} aria-label="Type" className="h-9 rounded-[10px] border border-hairline bg-card px-2 text-caption text-ink">
+          <option value="">All types</option>
+          <option value="expense">Expense</option>
+          <option value="income">Income</option>
+          <option value="transfer">Transfer</option>
+        </select>
+        <select name="wallet" defaultValue={filters.wallet} aria-label="Wallet" className="h-9 rounded-[10px] border border-hairline bg-card px-2 text-caption text-ink">
+          <option value="">All wallets</option>
+          {data.wallets.map((row) => (
+            <option key={row.id} value={row.id}>{row.name}</option>
+          ))}
+        </select>
+        <select name="category" defaultValue={filters.category} aria-label="Category" className="h-9 rounded-[10px] border border-hairline bg-card px-2 text-caption text-ink">
+          <option value="">All categories</option>
+          {data.categories.map((row) => (
+            <option key={row.id} value={row.id}>{row.name}</option>
+          ))}
+        </select>
+        <button type="submit" className="h-9 rounded-[10px] bg-ink px-3 text-caption text-paper">Apply</button>
+        {activeFilters ? (
+          <Link href={`/transactions?month=${month}`} className="text-caption text-ash underline underline-offset-4">
+            Clear
+          </Link>
+        ) : null}
+      </form>
 
       {days.length === 0 ? (
         <div className="px-4 py-10">
