@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Source_Serif_4 } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -22,6 +22,16 @@ const sourceSerif = Source_Serif_4({
 export const metadata: Metadata = {
   title: "Ripis",
   description: "One private, multi-currency ledger.",
+};
+
+/* §6 bottoms the shell on `env(safe-area-inset-bottom)`, and that variable is ZERO everywhere until
+   the page opts into the full screen with `viewport-fit=cover`. Without this export the tab bar's
+   safe-area term silently resolves to 0 and the last 34px of the bar sit under the home indicator on
+   the one device family whose inset is not zero — a bug no desktop viewport reproduces. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 /* §2.9 wants dark to follow the OS by default with a manual override that beats it. The override is
