@@ -44,8 +44,8 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
         to: `${month}-${lastDayOf(month)}`,
         perPage: MAX_PER_PAGE,
       }),
-      db.wallet.findMany({ select: { id: true, name: true } }),
-      db.category.findMany({ select: { id: true, name: true } }),
+      db.wallet.findMany({ where: { deleted_at: null }, select: { id: true, name: true } }),
+      db.category.findMany({ where: { archived_at: null }, select: { id: true, name: true } }),
       db.currency.findMany({ select: { code: true, symbol: true, suffix: true, minor_unit: true } }),
     ]);
     return { page, wallets, categories, currencies };
