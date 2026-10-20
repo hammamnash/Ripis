@@ -53,5 +53,11 @@ test("a transaction entered on the form is filed and listed", async ({ page }) =
 
   await expect(page).toHaveURL(/\/transactions$/);
   await expect(page.getByText("Verification expense")).toBeVisible();
+
+  /* A row is a link; a link to a route that does not exist is a 404, and a 404 still "renders". */
+  await page.getByText("Verification expense").click();
+  await expect(page).toHaveURL(/\/transactions\/[0-9a-f-]{36}/);
+  await expect(page.locator('[data-slot="transaction-detail"]')).toBeVisible();
+  await expect(page.getByText("Recorded in the base currency as")).toBeVisible();
   await expect(page.getByText("250.000").first()).toBeVisible();
 });
