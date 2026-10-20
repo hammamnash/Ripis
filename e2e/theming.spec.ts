@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { computed, setTheme } from './helpers';
 
 /**
  * Task 7.2's proof, ported from `mockups/_checks/`. The mockups could only assert against a
@@ -31,32 +32,6 @@ const DARK = {
   hairline: 'rgb(58, 52, 48)', // #3a3430
   skeleton: 'rgb(66, 59, 54)', // #423b36
 } as const;
-
-/**
- * Flip the theme and wait for the cascade to SETTLE.
- *
- * One frame is not enough: components carry `transition-colors` (§2.7), so for the length of the
- * transition `getComputedStyle` reports an interpolated colour between the two themes. Reading then
- * produces a value that is neither theme's, which looks like a broken token but is just motion
- * mid-flight. Only CSS transitions are awaited — `animate-pulse` runs forever and `finished` never
- * resolves for it.
- */
-async function setTheme(page: Page, theme: 'light' | 'dark') {
-  await page.evaluate(async (t) => {
-    document.documentElement.setAttribute('data-theme', t);
-    await new Promise((r) => requestAnimationFrame(() => r(null)));
-    const transitions = document
-      .getAnimations()
-      .filter((a) => a instanceof CSSTransition) as CSSTransition[];
-    await Promise.all(transitions.map((a) => a.finished.catch(() => undefined)));
-  }, theme);
-}
-
-async function computed(page: Page, testId: string, prop: string) {
-  return page.getByTestId(testId).evaluate((el, p) => {
-    return getComputedStyle(el).getPropertyValue(p as string);
-  }, prop);
-}
 
 /**
  * The computed colour as [r, g, b, alpha]. `bg-skeleton/40` compiles to
