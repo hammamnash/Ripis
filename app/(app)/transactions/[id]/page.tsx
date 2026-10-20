@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { removeTransaction } from "./actions";
@@ -65,6 +66,15 @@ export default async function TransactionDetailPage({ params }: PageProps<"/tran
           <Amount value={transaction.baseAmount} currency={display(transaction.baseCurrencyId)} className="text-caption text-ink" />
         </p>
       </section>
+      <div className="px-4">
+        <Link
+          href={`/transactions/${transaction.id}/edit`}
+          data-slot="edit-transaction"
+          className="block h-11 rounded-[12px] border border-hairline text-center text-caption leading-[2.75rem] text-ink"
+        >
+          Edit this transaction
+        </Link>
+      </div>
       <details data-slot="delete-transaction" className="px-4 pb-10">
         <summary className="cursor-pointer text-caption text-ash">Delete this transaction</summary>
         <form action={removeTransaction} className="pt-3">
