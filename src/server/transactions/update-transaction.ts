@@ -1,3 +1,5 @@
+import { Prisma } from '@prisma/client';
+
 import { writeAudited } from '../audit';
 import type { Caller } from '../context';
 import { db } from '../db';
@@ -32,8 +34,37 @@ import { serialiseTransaction, type TransactionResponse } from './serialise';
  */
 export type TransactionEdit = Partial<NewTransaction>;
 
+/**
+ * Does the incoming text name the same money as the stored decimal? `undefined` (the field was not sent)
+ * is the same value. A string `Decimal` rejects is treated as a change so `prepareTransaction` is the one
+ * to name the offending field, rather than a comparison here deciding the edit is a no-op.
+ */
+function sameDecimal(next: string | undefined | null, current: Prisma.Decimal): boolean {
+  if (next === undefined || next === null) return true;
+
+  try {
+    return new Prisma.Decimal(next).equals(current);
+  } catch {
+    return false;
+  }
+}
+
 function merged(row: Awaited<ReturnType<typeof requireTransactionRow>>, edit: TransactionEdit): NewTransaction {
   const pick = <T>(next: T | undefined, current: T): T => (next === undefined ? current : next);
+
+  // `base_amount` is derived, not carried: it is either the amount itself (a wallet in the primary
+  // currency) or a figure the caller stated alongside it. When an edit changes the amount or the wallet,
+  // the old base figure describes the old movement, and freezing it would leave reports summing a number
+  // the ledger no longer holds. When neither moves, the stated base survives — editing a description is
+  // not a reason to demand the exchange figure again.
+  //
+  // Compared as decimals, not strings: the form sends `300000` and the row holds `300000.0000`, and a
+  // string mismatch would call an unchanged amount a move and demand a restated base from a user who
+  // touched nothing. Text `Decimal` cannot read is invalid anyway — `prepareTransaction` refuses it a few
+  // lines later, so treating it as a move here changes nothing except which sentence the caller reads.
+  const moneyMoved =
+    !sameDecimal(edit.amount, row.amount) ||
+    (edit.walletId !== undefined && edit.walletId !== row.wallet_id);
 
   return {
     actor: edit.actor as Caller,
@@ -47,7 +78,7 @@ function merged(row: Awaited<ReturnType<typeof requireTransactionRow>>, edit: Tr
       edit.destinationAmount,
       row.destination_amount === null ? null : money(row.destination_amount),
     ),
-    baseAmount: pick(edit.baseAmount, money(row.base_amount)),
+    baseAmount: edit.baseAmount ?? (moneyMoved ? undefined : money(row.base_amount)),
     description: pick(edit.description, row.description),
     notes: pick(edit.notes, row.notes),
     tags: pick(edit.tags, row.tags),

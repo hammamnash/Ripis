@@ -405,8 +405,48 @@ describe('Task 3.8 — a soft delete removes money without removing history', ()
     expect(await balanceOf(second)).toBe('-30000.0000');
   });
 
-  it('refuses an edit that would put the row beyond the rules it was created under', async () => {
-    const cash = await wallet('Edit rules');
+  it('restates base_amount when an edit changes the amount, and keeps it when the money did not move', async () => {
+    /* The defect the edit screen caught on a real browser: `merged()` carried the old `base_amount` into
+       every edit, so an expense 250000 → 300000 still totalled 250000 in every report. The base figure is
+       derived from the movement, so when the movement changes the base must be re-derived (ADR-0004);
+       when only the description changes the stated figure must survive — a user who touched no money has
+       no figure to restate. */
+    const cash = await wallet('Edit base');
+    const created = await record({
+      transactionType: 'expense',
+      occurredOn: '2026-10-15',
+      walletId: cash,
+      categoryId: await category('expense'),
+      amount: '250000.0000',
+    });
+
+    const edited = await editTransaction(
+      ledger.request(`/api/transactions/${created.body.id}`, {
+        method: 'PATCH',
+        body: { amount: '300000.0000' },
+      }),
+      ctx(created.body.id),
+    );
+    const after = (await edited.json()) as TxBody;
+
+    expect(edited.status).toBe(200);
+    expect(after.baseAmount).toBe('300000.0000');
+    expect(await balanceOf(cash)).toBe('-300000.0000');
+
+    // The same row, money unchanged: a description edit keeps the base figure exactly as it stands.
+    const described = await editTransaction(
+      ledger.request(`/api/transactions/${created.body.id}`, {
+        method: 'PATCH',
+        body: { description: 'renamed only' },
+      }),
+      ctx(created.body.id),
+    );
+
+    expect(((await described.json()) as TxBody).baseAmount).toBe('300000.0000');
+    expect(await balanceOf(cash)).toBe('-300000.0000');
+  });
+
+  it('refuses an edit that would put the row beyond the rules it was created under', async () => {    const cash = await wallet('Edit rules');
     const created = await record({
       transactionType: 'expense',
       occurredOn: '2026-10-14',
