@@ -39,15 +39,24 @@ export async function createTransactionAction(
   const destinationAmount = decimal(form, "destinationAmount");
   if (destinationAmount === "invalid") return { error: "Destination amount must be digits only" };
 
+  const type = text(form, "type");
+  const categoryId = text(form, "categoryId");
+
+  /* Postgres holds this as a check constraint (`income_expense_need_category`), so an expense with no
+     category would fail at the driver with a sentence nobody can act on. Say it here instead. */
+  if ((type === "expense" || type === "income") && categoryId === "") {
+    return { error: "Pick a category — an expense or an income belongs to one" };
+  }
+
   try {
     await runAsCaller(caller, () =>
       createTransaction({
         actor: caller,
-        transactionType: text(form, "type"),
+        transactionType: type,
         occurredOn: text(form, "occurredOn"),
         walletId: text(form, "walletId"),
         destinationWalletId: text(form, "destinationWalletId") || null,
-        categoryId: text(form, "categoryId") || null,
+        categoryId: categoryId || null,
         amount,
         destinationAmount: destinationAmount ?? null,
         description: text(form, "description") || null,

@@ -1,4 +1,6 @@
 import { Receipt } from "lucide-react";
+import Link from "next/link";
+import type { ReactNode } from "react";
 import { connection } from "next/server";
 
 import { Amount } from "@/components/amount";
@@ -37,18 +39,24 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
       ? requested
       : calendarDate(new Date()).slice(0, 7);
 
+  /* A page number is a hand-editable query string, so it is clamped here rather than trusted: the list module
+     would happily ask Postgres for skip = -1. */
+  const requestedPage = typeof params.page === "string" ? Number(params.page) : 1;
+  const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+
   const data = await runAsCaller(caller, async () => {
-    const [page, wallets, categories, currencies] = await Promise.all([
+    const [listed, wallets, categories, currencies] = await Promise.all([
       listTransactions({
         from: `${month}-01`,
         to: `${month}-${lastDayOf(month)}`,
+        page,
         perPage: MAX_PER_PAGE,
       }),
       db.wallet.findMany({ where: { deleted_at: null }, select: { id: true, name: true } }),
       db.category.findMany({ where: { archived_at: null }, select: { id: true, name: true } }),
       db.currency.findMany({ select: { code: true, symbol: true, suffix: true, minor_unit: true } }),
     ]);
-    return { page, wallets, categories, currencies };
+    return { listed, wallets, categories, currencies };
   });
 
   const walletName = new Map(data.wallets.map((wallet) => [wallet.id, wallet.name]));
@@ -63,7 +71,7 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
   };
 
   const days: { on: string; rows: TransactionResponse[] }[] = [];
-  for (const row of data.page.data) {
+  for (const row of data.listed.data) {
     const last = days[days.length - 1];
     if (last && last.on === row.occurredOn) last.rows.push(row);
     else days.push({ on: row.occurredOn, rows: [row] });
@@ -77,8 +85,13 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
 
       {days.length === 0 ? (
         <div className="px-4 py-10">
-          <EmptyState icon={Receipt} title="No transactions in this month">
-            Log an expense with the + button and it lands here, filed under the day it happened.
+          <EmptyState
+            icon={Receipt}
+            title={page > 1 ? "Nothing on this page" : "No transactions in this month"}
+          >
+            {page > 1
+              ? "That page is past the end of the month. Step back with the pager below."
+              : "Log an expense with the + button and it lands here, filed under the day it happened."}
           </EmptyState>
         </div>
       ) : (
@@ -108,7 +121,50 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
           ))}
         </div>
       )}
+
+      {data.listed.totalPages > 1 ? (
+        <nav data-slot="transaction-pager" className="flex items-center justify-between gap-3 px-4 pb-10 pt-2">
+          <PagerLink month={month} page={data.listed.page - 1} disabled={data.listed.page <= 1}>
+            Newer
+          </PagerLink>
+          <p className="text-caption text-ash">
+            Page {data.listed.page} of {data.listed.totalPages}
+          </p>
+          <PagerLink
+            month={month}
+            page={data.listed.page + 1}
+            disabled={data.listed.page >= data.listed.totalPages}
+          >
+            Older
+          </PagerLink>
+        </nav>
+      ) : null}
     </>
+  );
+}
+
+/** A disabled step is a span, not a link: an href onto the page you are already reading is a control that lies. */
+function PagerLink({
+  month,
+  page,
+  disabled,
+  children,
+}: {
+  month: string;
+  page: number;
+  disabled: boolean;
+  children: ReactNode;
+}) {
+  if (disabled) {
+    return <span aria-disabled="true" className="text-caption text-ash">{children}</span>;
+  }
+  return (
+    <Link
+      href={`/transactions?month=${month}&page=${page}`}
+      className="text-caption text-ink underline underline-offset-4"
+    >
+      {children}
+    </Link>
   );
 }
 
