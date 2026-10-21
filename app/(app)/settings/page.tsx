@@ -1,19 +1,26 @@
-import { EmptyState } from "@/components/empty-state";
-import { ShellHeader } from "@/components/shell/header";
-import { Settings } from "lucide-react";
+import { connection } from "next/server";
 
-/* Screen 13 (§7). Primary currency, password, categories, wallets and reminders arrive in Task
-   7.4g. The screen is a tab now so the rail's five items all lead somewhere real — a tab that 404s
-   is worse than a screen that is not finished. */
-export default function SettingsPage() {
+import { SettingsData } from "@/components/settings-data";
+import { ShellHeader } from "@/components/shell/header";
+import { requireScreenSession } from "@/src/server/auth/require-screen";
+import { calendarDate } from "@/src/server/time/calendar-date";
+
+/*
+ * Screen 13 (§7). Task 7.4f lands the Data section here — screen 12 (Export) composed into Settings
+ * rather than given its own rail entry, because the rail's five items are fixed (§6) and a file
+ * feature is a setting, not a destination. Task 7.4g adds primary currency, password, categories and
+ * reminders beside it.
+ */
+export default async function SettingsPage() {
+  await connection();
+  await requireScreenSession();
+
   return (
     <>
       <ShellHeader title="Settings" />
 
-      <div className="px-4 py-10">
-        <EmptyState icon={Settings} title="Nothing to configure yet">
-          Primary currency, password and category management land with the settings screen.
-        </EmptyState>
+      <div className="px-4 py-6">
+        <SettingsData today={calendarDate(new Date())} />
       </div>
     </>
   );

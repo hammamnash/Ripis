@@ -4,7 +4,9 @@ import { runAsCaller, type Caller } from '../context';
 import { ApiError, errorResponse } from '../http/errors';
 import { readAuthConfig, type AuthConfig } from './config';
 import { verifyAccessToken } from './jwt';
+import { screenSession } from './screen-session';
 import { findLiveSession, type LiveSession } from './session';
+import { SESSION_COOKIE } from './session-cookie';
 
 /**
  * The one place a request becomes a caller.
@@ -18,6 +20,12 @@ import { findLiveSession, type LiveSession } from './session';
  * scoping extension needs, and nothing more), and the `session` is *which sign-in* — which is what a
  * password change needs, so it can end the others and keep this one (ADR-0045). Keeping them separate
  * is why `Caller` did not have to grow a field that only one route cares about.
+ *
+ * A request with no `Authorization` header is answered from the `ripis_session` cookie rather than
+ * refused outright — the same credential the screen frame already resolves, through the same
+ * `screenSession`/`findLiveSession` read (see `cookieSession` below). The header path is untouched: a
+ * bearer token that is present but bad still ends at the 401, because that is the signal a non-browser
+ * client refreshes on.
  *
  * The config is read per request rather than at import: a module that throws on a missing secret at
  * import time breaks `next build` in a way that is hard to read, while the same failure at request
@@ -38,6 +46,30 @@ function bearerToken(request: Request): string | null {
   return token === '' ? null : token;
 }
 
+/**
+ * The cookie half of the same decision, for a route handler.
+ *
+ * `screen-session.ts` resolves the cookie for a server component, which has `cookies()` but no `Request`.
+ * A route handler is the mirror image: it is handed a `Request` and cannot call `cookies()`, so the value
+ * is read off the header here. `screenSession` does the actual work — the id-shape guard and
+ * `findLiveSession` — so both paths answer "still signed in?" from one database read with one definition
+ * of a live session (ADR-0041), and a revoked or expired cookie fails identically on both sides.
+ */
+async function cookieSession(request: Request): Promise<Authenticated> {
+  const pairs = request.headers.get('cookie')?.split(';') ?? [];
+
+  for (const pair of pairs) {
+    const [name, ...rest] = pair.trim().split('=');
+    if (name === SESSION_COOKIE) {
+      const resolved = await screenSession(rest.join('='));
+      if (resolved !== null) return resolved;
+      break;
+    }
+  }
+
+  throw unauthenticated();
+}
+
 export interface Authenticated {
   caller: Caller;
   session: LiveSession;
@@ -48,7 +80,11 @@ export async function requireSession(
   config: AuthConfig = readAuthConfig(),
 ): Promise<Authenticated> {
   const token = bearerToken(request);
-  if (token === null) throw unauthenticated();
+
+  /* No header means this is the browser's own session speaking. A token that is present but wrong is not
+     that case: falling through would let a stale-token bug hide as a working cookie, so a failed bearer
+     attempt ends at the 401 that tells the client to refresh. */
+  if (token === null) return cookieSession(request);
 
   const claims = await verifyAccessToken(token, config);
   if (claims === null) throw unauthenticated();

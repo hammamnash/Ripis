@@ -1,6 +1,7 @@
 import { readAuthConfig } from '../../src/server/auth/config';
 import { hash } from '../../src/server/auth/password';
 import { signIn } from '../../src/server/auth/sign-in';
+import { SESSION_COOKIE } from '../../src/server/auth/session-cookie';
 import { CURRENCIES, prisma, resetLedger, seedCurrencies } from './db';
 
 /**
@@ -20,8 +21,12 @@ export interface SpecLedger {
   userId: string;
   email: string;
   token: string;
+  /** The session id the `ripis_session` cookie carries — what a browser would send. */
+  sessionId: string;
   /** A request the endpoint will accept, with the `Bearer` token already attached. */
   request(path: string, init?: { method?: string; body?: unknown }): Request;
+  /** The same request authenticated by the session cookie alone, as the app's own client sends it. */
+  cookieRequest(path: string, init?: { method?: string; body?: unknown }): Request;
 }
 
 const PASSWORD = 'phase-3-spec-password';
@@ -39,23 +44,30 @@ export async function signedInLedger(email: string): Promise<SpecLedger> {
     },
   });
 
-  const { accessToken } = await signIn(email, PASSWORD, readAuthConfig());
+  const { accessToken, sessionId } = await signIn(email, PASSWORD, readAuthConfig());
+
+  const build = (path: string, init: { method?: string; body?: unknown }, credential: string) =>
+    new Request(`http://spec.local${path}`, {
+      method: init.method ?? 'GET',
+      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      headers: { 'content-type': 'application/json', ...credentialHeader(credential) },
+    });
 
   return {
     userId: user.id,
     email,
     token: accessToken,
-    request(path, init = {}) {
-      return new Request(`http://spec.local${path}`, {
-        method: init.method ?? 'GET',
-        body: init.body === undefined ? undefined : JSON.stringify(init.body),
-        headers: {
-          'content-type': 'application/json',
-          authorization: `Bearer ${accessToken}`,
-        },
-      });
-    },
+    sessionId,
+    request: (path, init = {}) => build(path, init, `Bearer ${accessToken}`),
+    cookieRequest: (path, init = {}) => build(path, init, `${SESSION_COOKIE}=${sessionId}`),
   };
+}
+
+/** The credential under the header its kind belongs to: `Bearer` rides on `authorization`, a cookie on `cookie`. */
+function credentialHeader(credential: string): Record<string, string> {
+  return credential.startsWith('Bearer ')
+    ? { authorization: credential }
+    : { cookie: credential };
 }
 
 export async function closeLedger(ledger: SpecLedger): Promise<void> {
