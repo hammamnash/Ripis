@@ -3,6 +3,9 @@
 import { requireScreenSession } from "@/src/server/auth/require-screen";
 import { runAsCaller } from "@/src/server/context";
 import { listTransactions } from "@/src/server/transactions/read-transactions";
+import { accountKey, PASSWORD_PER_ACCOUNT } from "@/src/server/auth/attempts";
+import { changePassword } from "@/src/server/auth/change-password";
+import { checkRateLimit } from "@/src/server/rate-limit";
 
 export interface RangeSummary {
   count: number | null;
@@ -34,4 +37,66 @@ export async function exportSummaryAction(input: { from: string; to: string }): 
        and is refused in a sentence; that sentence is more actionable than a generic failure. */
     return { count: null, error: error instanceof Error ? error.message : "The range could not be read." };
   }
+}
+
+export interface PasswordState {
+  error: string | null;
+  /** True on the submit that actually changed the password, so the form can clear itself. */
+  changed: boolean;
+}
+
+/*
+ * §7 screen 13, "password" — the same act as `POST /api/auth/password`, reached from a form instead
+ * of a fetch. The guards are mirrored, not re-invented: the rate limit is the route's own rule keyed
+ * on the same account, so a browser that tries the form and the API in turn does not get two budgets
+ * (ADR-0044), and `changePassword` keeps its own validation because the sentences it throws are the
+ * actionable ones.
+ *
+ * The session id comes from the cookie's session, never the form: ADR-0045 keeps "the one that made
+ * the request" alive, and which session made it is only knowable server-side. A form field naming a
+ * session would let one sign-in end another's deliberately.
+ */
+export async function changePasswordAction(
+  _previous: PasswordState,
+  form: FormData,
+): Promise<PasswordState> {
+  const { caller, session } = await requireScreenSession();
+
+  const attempts = checkRateLimit(accountKey("password", caller.id), PASSWORD_PER_ACCOUNT);
+  if (!attempts.allowed) {
+    return {
+      error: `Too many attempts. Try again in ${attempts.retryAfterSeconds} seconds.`,
+      changed: false,
+    };
+  }
+
+  const currentPassword = String(form.get("currentPassword") ?? "");
+  const newPassword = String(form.get("newPassword") ?? "");
+  const confirmPassword = String(form.get("confirmPassword") ?? "");
+  if (currentPassword === "" || newPassword === "") {
+    return { error: "Fill in both passwords.", changed: false };
+  }
+  /* The server sees only one new password, so agreement between the two fields is this form's rule
+     alone — and a mistyped confirmation that silently wins is the worst outcome a password change has. */
+  if (newPassword !== confirmPassword) {
+    return { error: "The two new passwords do not match.", changed: false };
+  }
+
+  try {
+    await runAsCaller(caller, () =>
+      changePassword({
+        userId: caller.id,
+        currentSessionId: session.sessionId,
+        currentPassword,
+        newPassword,
+      }),
+    );
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "The password could not be changed.",
+      changed: false,
+    };
+  }
+
+  return { error: null, changed: true };
 }
