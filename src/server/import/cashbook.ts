@@ -277,41 +277,65 @@ export async function readCashbook(buffer: Buffer): Promise<ParsedCashbook> {
   return { primaryCurrency, rows };
 }
 
+function skipSelfTransfers(rows: CashbookRow[]): CashbookRow[] {
+  const skipped = rows.filter(
+    (row) =>
+      (row.literal === CASHBOOK_LITERALS.transferIn || row.literal === CASHBOOK_LITERALS.transferOut) &&
+      row.accounts !== '' &&
+      row.accounts === row.category,
+  );
+
+  if (skipped.length === 0) return rows;
+
+  return rows.filter((row) => !skipped.includes(row));
+}
 function splitAmbiguousWalletNames(rows: CashbookRow[], primaryCurrency: string): CashbookRow[] {
   const ordinary = new Map<string, Set<string>>();
+  const renamedCurrency = new Map<number, string>();
+
   for (const row of rows) {
     if (row.literal !== CASHBOOK_LITERALS.expense && row.literal !== CASHBOOK_LITERALS.income) continue;
     const currencies = ordinary.get(row.accounts) ?? new Set<string>();
     currencies.add(row.currency);
     ordinary.set(row.accounts, currencies);
+    renamedCurrency.set(row.row, row.currency);
   }
 
   const ambiguous = new Set([...ordinary.entries()].filter(([, currencies]) => currencies.size > 1).map(([name]) => name));
   if (ambiguous.size === 0) return rows;
 
-  const walletCurrency = new Map<string, string>();
+  const knownCurrency = new Map<string, string>();
   for (const [name, currencies] of ordinary) {
-    if (currencies.size === 1) walletCurrency.set(name, [...currencies][0]);
+    if (currencies.size === 1) {
+      const only = [...currencies][0];
+      if (only !== undefined) knownCurrency.set(name, only);
+    }
   }
-
-  const rename = (row: CashbookRow, currency: string): CashbookRow =>
-    ambiguous.has(row.accounts) ? { ...row, accounts: `${row.accounts} ${currency}` } : row;
 
   for (const [out, into] of pairsOf(rows)) {
-    const sourceCurrency = out.currency === primaryCurrency
-      ? out.accounts2 === out.primaryValue ? primaryCurrency : walletCurrency.get(out.accounts) ?? primaryCurrency
-      : out.accounts2 === out.primaryValue ? primaryCurrency : out.currency;
-    const destinationCurrency = into.currency === primaryCurrency
-      ? into.accounts2 === into.primaryValue ? primaryCurrency : walletCurrency.get(into.accounts) ?? primaryCurrency
-      : into.accounts2 === into.primaryValue ? primaryCurrency : into.currency;
-    walletCurrency.set(out.accounts, sourceCurrency);
-    walletCurrency.set(into.accounts, destinationCurrency);
+    const outCurrency = out.accounts2 === out.primaryValue ? primaryCurrency : out.currency;
+    const intoCurrency = into.accounts2 === into.primaryValue ? primaryCurrency : into.currency;
+    renamedCurrency.set(out.row, knownCurrency.get(out.accounts) ?? outCurrency);
+    renamedCurrency.set(into.row, knownCurrency.get(into.accounts) ?? intoCurrency);
   }
 
-  return rows.map((row) => {
-    const currency = walletCurrency.get(row.accounts);
-    return currency === undefined ? row : rename(row, currency);
-  });
+  const renamed = new Map<number, CashbookRow>();
+  for (const row of rows) {
+    const currency = renamedCurrency.get(row.row);
+    renamed.set(row.row, currency !== undefined && ambiguous.has(row.accounts)
+      ? { ...row, accounts: `${row.accounts} ${currency}` }
+      : row);
+  }
+
+  for (const [out, into] of pairsOf(rows)) {
+    const outRow = renamed.get(out.row);
+    const intoRow = renamed.get(into.row);
+    if (outRow === undefined || intoRow === undefined) continue;
+    if (ambiguous.has(out.category)) outRow.category = `${out.category} ${renamedCurrency.get(into.row) ?? into.currency}`;
+    if (ambiguous.has(into.category)) intoRow.category = `${into.category} ${renamedCurrency.get(out.row) ?? out.currency}`;
+  }
+
+  return rows.map((row) => renamed.get(row.row) ?? row);
 }
 
 /**
@@ -518,15 +542,17 @@ export function planCashbook(parsed: ParsedCashbook, ledgerPrimaryCurrency: stri
     );
   }
 
-  const currencies = walletCurrencies(parsed.rows, parsed.primaryCurrency);
-  const pairs = pairsOf(parsed.rows);
+  const rows = skipSelfTransfers(parsed.rows);
+  const rowsWithSplitWallets = splitAmbiguousWalletNames(rows, parsed.primaryCurrency);
+  const currencies = walletCurrencies(rowsWithSplitWallets, parsed.primaryCurrency);
+  const pairs = pairsOf(rowsWithSplitWallets);
 
   const writes: PlannedWrite[] = [];
   const byOutRow = new Map<number, CashbookRow>();
 
   for (const [out, into] of pairs) byOutRow.set(out.row, into);
 
-  for (const row of parsed.rows) {
+  for (const row of rowsWithSplitWallets) {
     const where = `row ${row.row}`;
 
     if (row.literal === CASHBOOK_LITERALS.transferIn) {
@@ -615,7 +641,7 @@ export function planCashbook(parsed: ParsedCashbook, ledgerPrimaryCurrency: stri
     wallets,
     categories,
     writes,
-    rows: parsed.rows.length,
+    rows: rowsWithSplitWallets.length,
     from: days[0] ?? '',
     to: days[days.length - 1] ?? '',
   };
