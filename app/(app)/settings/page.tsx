@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 
+import { ThemeSelector } from "@/components/theme-selector";
 import { SettingsAccount } from "@/components/settings-account";
 import { SettingsData } from "@/components/settings-data";
 import { ShellHeader } from "@/components/shell/header";
@@ -35,6 +36,7 @@ export default async function SettingsPage() {
           email={account.email}
           primaryCurrency={account.primaryCurrency}
         />
+        <ThemeSelector />
         <SettingsData today={calendarDate(new Date())} />
       </div>
     </>

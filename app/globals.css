@@ -443,6 +443,18 @@ body {
   border-radius: inherit;
 }
 
+/* §2.7 / §9: users who request reduced motion get no decorative transitions. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* §2.3: "Tabular figures are mandatory on every number that can change or align. Money, dates,
    percentages, counts." Copy-pasted from §2.3; the Amount Display relies on it. */
 .amount, .tabular {
