@@ -194,8 +194,30 @@ function pair(over: {
 }
 
 describe('the cashbook import maps a file back to transactions (Task 6.5, FR-12)', () => {
+  it('reverses a negative ordinary row while keeping stored money positive', () => {
+    const plan = planCashbook(
+      parsed([
+        row({
+          accounts: 'Cash TST',
+          category: 'Other',
+          note: 'Difference',
+          primaryValue: '-195.0000',
+          amount: '-195.0000',
+          accounts2: '-195.0000',
+          literal: CASHBOOK_LITERALS.expense,
+        }),
+      ]),
+      TST,
+    );
+
+    expect(plan.writes[0]).toMatchObject({
+      transactionType: 'income',
+      amount: '195.0000',
+      baseAmount: '195.0000',
+    });
+  });
+
   it('reads amount and currency off the source leg, not off the file’s Amount column', () => {
-    // `Cash TST` holds the primary currency, so the file names the leg that arrived (`5000000 TS0`) and puts
     // the source's own figure (`1250000`, which is also column 6) in `Accounts2`. Reading `Amount`/`Currency`
     // into `amount`/`currency_id` would store 5,000,000 TS0 as the *source* amount and look entirely correct.
     const plan = planCashbook(

@@ -3,7 +3,7 @@ import ExcelJS from 'exceljs';
 
 import { CASHBOOK_LITERALS, cashbookHeaders } from '../export/cashbook';
 import { ApiError } from '../http/errors';
-import { money, parsePositiveAmount } from '../money/amount';
+import { money, parseAmount } from '../money/amount';
 import { calendarDate } from '../time/calendar-date';
 
 /**
@@ -162,10 +162,14 @@ function text(value: unknown, where: string): string {
  * four, which is the same rule at the same boundary).
  */
 function decimal(value: unknown, where: string): string {
-  if (typeof value === 'string' && value.trim() !== '') return money(parsePositiveAmount(value.trim(), where));
-  if (typeof value === 'number' && Number.isFinite(value)) return money(parsePositiveAmount(String(value), where));
+  if (typeof value === 'string' && value.trim() !== '') return money(parseAmount(value.trim(), where));
+  if (typeof value === 'number' && Number.isFinite(value)) return money(parseAmount(String(value), where));
 
   throw failure(`${where} must be a number.`);
+}
+
+function absoluteMoney(value: string, where: string): string {
+  return money(parseAmount(value, where).abs());
 }
 
 /** A `Period` cell: the instant the entry was written. A date cell is read as it stands, text names UTC. */
@@ -273,11 +277,46 @@ export async function readCashbook(buffer: Buffer): Promise<ParsedCashbook> {
   return { primaryCurrency, rows };
 }
 
+function splitAmbiguousWalletNames(rows: CashbookRow[], primaryCurrency: string): CashbookRow[] {
+  const ordinary = new Map<string, Set<string>>();
+  for (const row of rows) {
+    if (row.literal !== CASHBOOK_LITERALS.expense && row.literal !== CASHBOOK_LITERALS.income) continue;
+    const currencies = ordinary.get(row.accounts) ?? new Set<string>();
+    currencies.add(row.currency);
+    ordinary.set(row.accounts, currencies);
+  }
+
+  const ambiguous = new Set([...ordinary.entries()].filter(([, currencies]) => currencies.size > 1).map(([name]) => name));
+  if (ambiguous.size === 0) return rows;
+
+  const walletCurrency = new Map<string, string>();
+  for (const [name, currencies] of ordinary) {
+    if (currencies.size === 1) walletCurrency.set(name, [...currencies][0]);
+  }
+
+  const rename = (row: CashbookRow, currency: string): CashbookRow =>
+    ambiguous.has(row.accounts) ? { ...row, accounts: `${row.accounts} ${currency}` } : row;
+
+  for (const [out, into] of pairsOf(rows)) {
+    const sourceCurrency = out.currency === primaryCurrency
+      ? out.accounts2 === out.primaryValue ? primaryCurrency : walletCurrency.get(out.accounts) ?? primaryCurrency
+      : out.accounts2 === out.primaryValue ? primaryCurrency : out.currency;
+    const destinationCurrency = into.currency === primaryCurrency
+      ? into.accounts2 === into.primaryValue ? primaryCurrency : walletCurrency.get(into.accounts) ?? primaryCurrency
+      : into.accounts2 === into.primaryValue ? primaryCurrency : into.currency;
+    walletCurrency.set(out.accounts, sourceCurrency);
+    walletCurrency.set(into.accounts, destinationCurrency);
+  }
+
+  return rows.map((row) => {
+    const currency = walletCurrency.get(row.accounts);
+    return currency === undefined ? row : rename(row, currency);
+  });
+}
+
 /**
  * Every wallet in the file with the currency the file says it holds — and a refusal for any wallet the file
  * does not say it for.
- *
- * A literal's evidence is different in each half of the shape. An `Exp.` or `Income` row names its own
  * wallet's currency in `Currency`, because for those rows the file's `Amount` *is* that wallet's leg. A
  * transfer pair names the leg that is not in the primary currency, so which wallet that is has to be worked
  * out from the pair — and that is the whole of `pairCurrencies`.
@@ -308,6 +347,14 @@ function walletCurrencies(rows: CashbookRow[], primaryCurrency: string): Map<str
     }
   }
 
+  // Ordinary rows identify their wallet currency directly. Resolve those first so a transfer whose foreign
+  // leg is the primary currency can inherit the destination wallet's currency from the rest of the file.
+  for (const row of rows) {
+    if (row.literal === CASHBOOK_LITERALS.expense || row.literal === CASHBOOK_LITERALS.income) {
+      claim(row.accounts, row.currency, `Row ${row.row}`);
+    }
+  }
+
   for (const [out, into] of pairsOf(rows)) {
     // Nothing is re-checked here about the two rows agreeing: `pairsOf` matches on the instant, the
     // counterparties, column 6, the foreign leg, the note and the description together, so a pair that reached
@@ -316,10 +363,21 @@ function walletCurrencies(rows: CashbookRow[], primaryCurrency: string): Map<str
     const foreign = out.currency;
 
     if (foreign === primaryCurrency) {
-      // The foreign leg is in the primary currency, which only happens when the source leg is: a same-currency
-      // transfer, and both wallets hold the primary currency.
-      claim(out.accounts, primaryCurrency, `Row ${out.row}`);
-      claim(into.accounts, primaryCurrency, `Row ${into.row}`);
+      // The foreign leg is labelled with the primary currency in this shape. Use Accounts2 versus column 6
+      // to identify which side is primary; the other wallet's currency must come from another row in the file.
+      // When both sides agree (a same-currency transfer, or neither leg matching column 6), both wallets claim
+      // the label; a later row or the conflicting-claim check resolves any disagreement.
+      const outHoldsPrimary = out.accounts2 === out.primaryValue;
+      const intoHoldsPrimary = into.accounts2 === into.primaryValue;
+
+      if (outHoldsPrimary === intoHoldsPrimary) {
+        claim(out.accounts, primaryCurrency, `Row ${out.row}`);
+        claim(into.accounts, primaryCurrency, `Row ${into.row}`);
+      } else if (outHoldsPrimary) {
+        claim(out.accounts, primaryCurrency, `Row ${out.row}`);
+      } else {
+        claim(into.accounts, primaryCurrency, `Row ${into.row}`);
+      }
       continue;
     }
 
@@ -514,15 +572,32 @@ export function planCashbook(parsed: ParsedCashbook, ledgerPrimaryCurrency: stri
       );
     }
 
+    const sourceAmount = parseAmount(row.accounts2, `${where}, column 11 (Accounts2)`);
+    const sourceBase = parseAmount(row.primaryValue, `${where}, column 6 (${parsed.primaryCurrency})`);
+
+    if (sourceAmount.isZero() || sourceBase.isZero()) {
+      throw failure(`${where} has a zero money value, and a zero transaction cannot be imported.`);
+    }
+
+    const positive = sourceAmount.greaterThan(0);
+    const transactionType =
+      row.literal === CASHBOOK_LITERALS.expense
+        ? positive
+          ? 'expense'
+          : 'income'
+        : positive
+          ? 'income'
+          : 'expense';
+
     writes.push({
-      transactionType: row.literal === CASHBOOK_LITERALS.expense ? 'expense' : 'income',
+      transactionType,
       occurredOn: calendarDate(row.period),
       walletName: row.accounts,
       destinationWalletName: null,
       categoryName: row.category,
-      amount: row.accounts2,
+      amount: absoluteMoney(row.accounts2, `${where}, column 11 (Accounts2)`),
       destinationAmount: null,
-      baseAmount: row.primaryValue,
+      baseAmount: absoluteMoney(row.primaryValue, `${where}, column 6 (${parsed.primaryCurrency})`),
       description: emptyToNull(row.description),
       notes: emptyToNull(row.note),
     });
