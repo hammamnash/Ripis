@@ -130,6 +130,10 @@ export async function rotateSession(
   return { sessionId: session.id, userId: session.user_id, refreshToken: issued.token, expiresAt };
 }
 
+export async function revokeSessionBySessionId(sessionId: string, at: Date = new Date()): Promise<void> {
+  await revokeSession(sessionId, at);
+}
+
 export async function revokeSessionByRefreshToken(
   refreshToken: string,
   config: AuthConfig,

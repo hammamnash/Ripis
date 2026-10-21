@@ -56,6 +56,20 @@ export function clearedSessionCookie(secure: boolean): string {
   return [`${SESSION_COOKIE}=`, 'Max-Age=0', ...attributes(secure)].join('; ');
 }
 
+/** Read the HttpOnly browser session id from a same-origin request. */
+export function readSessionCookie(request: Request): string | null {
+  const cookie = request.headers.get('cookie');
+  if (cookie === null) return null;
+
+  const value = cookie
+    .split(';')
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(`${SESSION_COOKIE}=`))
+    ?.slice(SESSION_COOKIE.length + 1);
+
+  return value === undefined || value === '' ? null : value;
+}
+
 /**
  * Whether this request arrived over TLS.
  *

@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 
+import { LogoutButton } from "@/components/logout-button";
 import { ThemeSelector } from "@/components/theme-selector";
 import { SettingsAccount } from "@/components/settings-account";
 import { SettingsData } from "@/components/settings-data";
@@ -37,6 +38,7 @@ export default async function SettingsPage() {
           primaryCurrency={account.primaryCurrency}
         />
         <ThemeSelector />
+        <LogoutButton />
         <SettingsData today={calendarDate(new Date())} />
       </div>
     </>

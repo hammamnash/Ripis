@@ -60,6 +60,19 @@ test('a wrong password states the cause and stays on the screen', async ({ page 
 test.describe('once signed in', () => {
   test.use({ storageState: E2E_STORAGE_STATE });
 
+  test('signing out from Settings revokes the browser session and returns to sign-in', async ({ page }) => {
+    await page.context().clearCookies();
+    await signInThroughForm(page);
+    await page.goto('/settings');
+
+    await page.getByRole('button', { name: 'Sign out' }).click();
+    await expect(page).toHaveURL('/sign-in');
+    await expect(page.getByRole('heading', { name: 'Ripis' })).toBeVisible();
+
+    await page.goto('/settings');
+    await expect(page).toHaveURL('/sign-in');
+  });
+
   test('the form is not a second entry point into a live session', async ({ page }) => {
     await page.goto('/sign-in');
 
