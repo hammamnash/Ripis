@@ -29,7 +29,8 @@
     "db:status": "prisma migrate status --schema prisma/schema.prisma",
     "db:seed": "tsx --env-file=.env prisma/seed.cli.ts",
     "docs:tables": "node scripts/check-doc-tables.mjs",
-    "gate": "npm run typecheck && npm run lint && npm run test && npm run docs:tables"
+    "gate:architecture": "tsx scripts/phase8-mechanical-gates.ts",
+    "gate": "npm run typecheck && npm run lint && npm run test && npm run docs:tables && npm run gate:architecture"
   },
   "prisma": {
     "seed": "tsx --env-file=.env prisma/seed.cli.ts"
