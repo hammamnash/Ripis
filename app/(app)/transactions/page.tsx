@@ -6,6 +6,8 @@ import { connection } from "next/server";
 import { Amount } from "@/components/amount";
 import { EmptyState } from "@/components/empty-state";
 import { MonthSelector } from "@/components/month-selector";
+import { SummaryBand } from "@/components/summary-band";
+import { TransactionSearch } from "@/components/transaction-search";
 import { ShellHeader } from "@/components/shell/header";
 import { TransactionRow } from "@/components/transaction-row";
 import type { CurrencyDisplay } from "@/src/lib/display-money";
@@ -14,6 +16,8 @@ import { runAsCaller } from "@/src/server/context";
 import { db } from "@/src/server/db";
 import { calendarDate } from "@/src/server/time/calendar-date";
 import { listTransactions, MAX_PER_PAGE } from "@/src/server/transactions/read-transactions";
+import { readReportQuery } from "@/src/server/reports/filter";
+import { monthSummary } from "@/src/server/reports/month-summary";
 import type { TransactionResponse } from "@/src/server/transactions/serialise";
 
 /*
@@ -46,10 +50,11 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
 
   const pick = (key: string): string => (typeof params[key] === "string" ? String(params[key]) : "");
   const filters = { type: pick("type"), wallet: pick("wallet"), category: pick("category") };
-  const activeFilters = Boolean(filters.type || filters.wallet || filters.category);
+  const search = typeof params.q === "string" ? params.q : "";
+  const activeFilters = Boolean(filters.type || filters.wallet || filters.category || search);
 
   const data = await runAsCaller(caller, async () => {
-    const [listed, wallets, categories, currencies] = await Promise.all([
+    const [listed, summary, wallets, categories, currencies] = await Promise.all([
       listTransactions({
         from: `${month}-01`,
         to: `${month}-${lastDayOf(month)}`,
@@ -57,13 +62,15 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
         type: filters.type || undefined,
         walletId: filters.wallet || undefined,
         categoryId: filters.category || undefined,
+        search: search || undefined,
         perPage: MAX_PER_PAGE,
       }),
+      monthSummary(readReportQuery(new URLSearchParams({ month }))),
       db.wallet.findMany({ where: { deleted_at: null }, select: { id: true, name: true } }),
       db.category.findMany({ where: { archived_at: null }, select: { id: true, name: true } }),
       db.currency.findMany({ select: { code: true, symbol: true, suffix: true, minor_unit: true } }),
     ]);
-    return { listed, wallets, categories, currencies };
+    return { listed, wallets, categories, currencies, summary };
   });
 
   const walletName = new Map(data.wallets.map((wallet) => [wallet.id, wallet.name]));
@@ -90,8 +97,11 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
         <MonthSelector month={month} basePath="/transactions" />
       </ShellHeader>
 
+      <SummaryBand income={data.summary.income} expense={data.summary.expense} net={data.summary.net} currency={display(data.summary.currency)} />
+
       <form data-slot="transaction-filters" method="get" action="/transactions" className="flex flex-wrap items-center gap-2 px-4 pb-4">
         <input type="hidden" name="month" value={month} />
+        <TransactionSearch />
         <select name="type" defaultValue={filters.type} aria-label="Type" className="h-9 rounded-[10px] border border-hairline bg-card px-2 text-caption text-ink">
           <option value="">All types</option>
           <option value="expense">Expense</option>

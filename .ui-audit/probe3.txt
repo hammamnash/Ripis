@@ -1,0 +1,55 @@
+DASH {
+ "wrapperGap": "24px",
+ "sectionCount": 4,
+ "walletCard": {
+  "radius": "16px",
+  "border": "1px",
+  "pad": "20px",
+  "bg": "rgb(255, 255, 255)",
+  "h": 87
+ },
+ "walletCardCount": 19,
+ "chartCardBars": [
+  "6px",
+  "6px",
+  "6px",
+  "6px",
+  "6px",
+  "6px",
+  "6px",
+  "6px",
+  "6px",
+  "6px"
+ ],
+ "chartBarColors": [
+  "rgb(107, 114, 128)",
+  "rgb(107, 114, 128)",
+  "rgb(107, 114, 128)",
+  "rgb(107, 114, 128)",
+  "rgb(107, 114, 128)"
+ ]
+}
+TX {
+ "rowHasIconOrImage": 0,
+ "rowIconBgPresent": false,
+ "rowHeight": 67,
+ "rowPad": "12px 16px",
+ "rowNoteFs": "15px",
+ "rowMetaFs": "12px",
+ "dayHeaderFs": "12px",
+ "dayCount": 12,
+ "filterHeights": [
+  "36px",
+  "36px",
+  "36px",
+  "36px"
+ ],
+ "fab": {
+  "size": 56,
+  "bg": "rgb(12, 10, 8)",
+  "bottom": "80px"
+ },
+ "tabbarH": 64
+}
+SETTINGS Settings | Account | The identity this ledger records against. | Name | hammam | Email | mail@hammamnash.site | Primary currency | IDR | Password | Changing it signs out every other device. | CURRENT PASSWORD | NEW PASSWORD | CONFIRM NEW PASSWORD | Change password | Appearance | Choose 
+WALLETS {"cards":19,"firstH":87,"hasGroupHeadings":1,"h2s":["Assets"]}

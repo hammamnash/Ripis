@@ -1,0 +1,171 @@
+##### /transactions outline
+<main .flex-1.pb-[calc(var(--tabbar-height)+env(safe-area-inset-bottom)+32px)]>
+  <header .sticky.top-0.z-30.border-b>
+    <div .flex.min-h-[var(--target-min)].items-center.gap-2>
+      <h1 .min-w-0.flex-1.truncate.font-serif "Transactions">
+    <div .flex.items-center.justify-between.px-2>
+      <a .flex.size-[var(--target-min)].shrink-0.items-center>
+      <span .text-body-lg.font-w450.tabular-nums.text-ink "October 2026">
+      <a .flex.size-[var(--target-min)].shrink-0.items-center>
+  <form .flex.flex-wrap.items-center.gap-2>
+    <input>
+    <select .h-9.rounded-[10px].border.border-hairline>
+      <option "All types">
+      <option "Expense">
+      <option "Income">
+      <option "Transfer">
+    <select .h-9.rounded-[10px].border.border-hairline>
+      <option "All wallets">
+      <option "Hutang IDR">
+      <option "Shopeepay">
+      <option "Jenius">
+      <option "Other Reserve Account">
+      <option "Hutang VND">
+      <option "BCA">
+      <option "Stockbit">
+      <option "Gopay">
+      <option "Mandiri">
+      <option "Piutang">
+      <option "Cash">
+      <option "Jaklingko">
+      <option "E-Money">
+      <option "Panin">
+      <option "Other Cash Account">
+      <option "Ovo">
+      <option "Dana">
+      <option "Flexi Saver">
+      <option "Cash VND">
+    <select .h-9.rounded-[10px].border.border-hairline>
+      <option "All categories">
+      <option "Allowance">
+      <option "Bills">
+      <option "Bonus">
+      <option "Clothes">
+      <option "Education">
+      <option "Food">
+      <option "Gift">
+      <option "Health">
+      <option "Household">
+      <option "Leisure">
+      <option "Other">
+      <option "Other">
+      <option "Personal Care">
+      <option "Petty cash">
+      <option "Salary">
+      <option "Shopping">
+      <option "Social Life">
+      <option "Transport">
+    <button .h-9.rounded-[10px].bg-ink.px-3 "Apply">
+  <div .flex.flex-col.gap-6.px-4>
+    <section .flex.flex-col>
+      <div .flex.items-baseline.justify-between.gap-3>
+      <div .flex.flex-col.divide-y.divide-hairline>
+    <section .flex.flex-col>
+      <div .flex.items-baseline.justify-between.gap-3>
+      <div .flex.flex-col.divide-y.divide-hairline>
+    <section .flex.flex-col>
+      <div .flex.items-baseline.justify-between.gap-3>
+      <div .flex.flex-col.divide-y.divide-hairline>
+    <section .flex.flex-col>
+      <div .flex.items-baseline.justify-between.gap-3>
+      <div .flex.flex-col.divide-y.divide-hairline>
+    <section .flex.flex-col>
+      <div .flex.items-baseline.justify-between.gap-3>
+      <div .flex.flex-col.divide-y.divide-hairline>
+    <section .flex.flex-col>
+      <div .flex.items-baseline.justify-between.gap-3>
+      <div .flex.flex-col.divide-y.divide-hairline>
+    <section .flex.flex-col>
+      <div .flex.items-baseline.justify-between.gap-3>
+      <div .flex.flex-col.divide-y.divide-hairline>
+    <section .flex.flex-col>
+      <div .flex.items-baseline.justify-between.gap-3>
+      <div .flex.flex-col.divide-y.divide-hairline>
+    <section .flex.flex-col>
+      <div .flex.items-baseline.justify-between.gap-3>
+      <div .flex.flex-col.divide-y.divide-hairline>
+    <section .flex.flex-col>
+      <div .flex.items-baseline.justify-between.gap-3>
+      <div .flex.flex-col.divide-y.divide-hairline>
+    <section .flex.flex-col>
+      <div .flex.items-baseline.justify-between.gap-3>
+      <div .flex.flex-col.divide-y.divide-hairline>
+    <section .flex.flex-col>
+      <div .flex.items-baseline.justify-between.gap-3>
+      <div .flex.flex-col.divide-y.divide-hairline>
+
+##### metrics
+{"rowCount":48,"rowHref":"/transactions/7dbd0ec4-c401-42a2-84f4-28f642b6e277","rowHeight":66.5,"rowText":"Other |  | Hutang IDR |  | +Rp 3.023.604 | + | Rp | 3.023.604","rowBorder":"0px solid rgb(12, 10, 8) / radius 0px","rowPad":"12px 16px","rowBg":"rgba(0, 0, 0, 0)","rowFonts":{"note":"15px","amount":"15px"},"headings":["H1:Transactions","H2:Wed 21 Oct","H2:Sun 11 Oct","H2:Sat 10 Oct","H2:Fri 9 Oct","H2:Thu 8 Oct","H2:Wed 7 Oct","H2:Tue 6 Oct","H2:Mon 5 Oct","H2:Sun 4 Oct","H2:Sat 3 Oct","H2:Fri 2 Oct","H2:Thu 1 Oct"],"sections":["Wed 21 Oct","Sun 11 Oct","Sat 10 Oct","Fri 9 Oct","Thu 8 Oct","Wed 7 Oct","Tue 6 Oct","Mon 5 Oct","Sun 4 Oct","Sat 3 Oct","Fri 2 Oct","Thu 1 Oct"],"scrollerOverflowX":"visible"}
+
+##### / outline
+<main .flex-1.pb-[calc(var(--tabbar-height)+env(safe-area-inset-bottom)+32px)]>
+  <div .flex.flex-col.gap-6.pb-6>
+    <header .sticky.top-0.z-30.border-b>
+      <div .flex.min-h-[var(--target-min)].items-center.gap-2>
+    <section .rounded-[20px].bg-panel.p-6.text-paper>
+      <p .text-micro.uppercase.text-ash-on-panel "Net worth">
+      <p .mt-3>
+      <p .mt-2.text-caption.text-ash-on-panel "Across 17 wallets · VND not converted">
+      <dl .mt-6.flex.flex-col.gap-3>
+    <section .flex.flex-col.gap-3>
+      <h2 .text-subheading.text-ink "Wallets">
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+      <a .flex.items-center.justify-between.gap-4>
+    <section .rounded-[16px].border.border-hairline.bg-card>
+      <h2 .text-subheading.text-ink "Where it went">
+      <ul .mt-4.flex.flex-col.gap-3>
+
+##### dashboard metrics
+{"h1":"Dashboard","heroBg":"rgb(26, 25, 25)","heroRadius":"20px","heroPad":"24px","heroH":247.5,"figureSizes":[{"t":"Rp 24.279.930","fs":"60px","ff":"\"Source Serif 4\"","w":"400"},{"t":"24.279.930","fs":"60px","ff":"\"Source Serif 4\"","w":"400"},{"t":"Rp 24.279.930","fs":"15px","ff":"Inter","w":"400"},{"t":"24.279.930","fs":"15px","ff":"Inter","w":"400"},{"t":"Rp 1.602.530","fs":"16px","ff":"Inter","w":"400"},{"t":"1.602.530","fs":"16px","ff":"Inter","w":"400"},{"t":"Rp 88.000","fs":"16px","ff":"Inter","w":"400"},{"t":"88.000","fs":"16px","ff":"Inter","w":"400"}],"hasDeltaLine":false,"charts":[],"h2s":["H2:Wallets","H2:Where it went"]}
+
+##### /transactions/new outline
+<main .flex-1.pb-[calc(var(--tabbar-height)+env(safe-area-inset-bottom)+32px)]>
+  <header .sticky.top-0.z-30.border-b>
+    <div .flex.min-h-[var(--target-min)].items-center.gap-2>
+      <h1 .min-w-0.flex-1.truncate.font-serif "Add transaction">
+  <form .flex.flex-col.gap-5.px-4>
+    <input>
+    <input>
+    <input>
+    <input>
+    <input>
+    <div .grid.grid-cols-3.gap-2>
+      <button .inline-flex.shrink-0.items-center.justify-center "Expense">
+      <button .inline-flex.shrink-0.items-center.justify-center "Income">
+      <button .inline-flex.shrink-0.items-center.justify-center "Transfer">
+    <div .flex.flex-col.gap-2>
+      <label .flex.items-center.gap-2.font-medium "Amount">
+      <div .flex.items-center.gap-2>
+    <div .flex.flex-col.gap-2>
+      <label .flex.items-center.gap-2.font-medium "Wallet">
+      <select .h-11.w-full.rounded-card.border>
+    <div .flex.flex-col.gap-2>
+      <label .flex.items-center.gap-2.font-medium "Category">
+      <select .h-11.w-full.rounded-card.border>
+    <div .flex.flex-col.gap-2>
+      <label .flex.items-center.gap-2.font-medium "Date">
+      <input .h-12.w-full.min-w-0.rounded-input>
+    <div .flex.flex-col.gap-2>
+      <label .flex.items-center.gap-2.font-medium "Description">
+      <input .h-12.w-full.min-w-0.rounded-input>
+    <button .inline-flex.shrink-0.items-center.justify-center "Save transaction">
+
+##### form metrics
+{"amountFs":"20px","amountH":"48px","amountAlign":"start","amountWeight":"400","segmented":false,"segItems":null,"selects":2,"nativeDate":true,"buttons":[{"t":"Expense","bg":"rgb(12, 10, 8)","color":"rgb(255, 255, 255)","h":"48px","r":"9999px"},{"t":"Income","bg":"rgba(0, 0, 0, 0)","color":"rgb(12, 10, 8)","h":"48px","r":"9999px"},{"t":"Transfer","bg":"rgba(0, 0, 0, 0)","color":"rgb(12, 10, 8)","h":"48px","r":"9999px"},{"t":"Save transaction","bg":"rgb(12, 10, 8)","color":"rgb(255, 255, 255)","h":"48px","r":"9999px"}],"labels":[{"t":"Amount","fs":"16px","tt":"uppercase","ls":"normal"},{"t":"Wallet","fs":"16px","tt":"uppercase","ls":"normal"},{"t":"Category","fs":"16px","tt":"uppercase","ls":"normal"},{"t":"Date","fs":"16px","tt":"uppercase","ls":"normal"},{"t":"Description","fs":"16px","tt":"uppercase","ls":"normal"}],"inputs":[{"n":"$ACTION_REF_1","fs":"16px","h":"auto","bg":"rgba(0, 0, 0, 0)","r":"0px"},{"n":"$ACTION_1:0","fs":"16px","h":"auto","bg":"rgba(0, 0, 0, 0)","r":"0px"},{"n":"$ACTION_1:1","fs":"16px","h":"auto","bg":"rgba(0, 0, 0, 0)","r":"0px"},{"n":"$ACTION_KEY","fs":"16px","h":"auto","bg":"rgba(0, 0, 0, 0)","r":"0px"},{"n":"type","fs":"16px","h":"auto","bg":"rgba(0, 0, 0, 0)","r":"0px"},{"n":"amount","fs":"20px","h":"48px","bg":"rgb(255, 255, 255)","r":"12px"},{"n":"occurredOn","fs":"16px","h":"48px","bg":"rgb(255, 255, 255)","r":"12px"},{"n":"description","fs":"16px","h":"48px","bg":"rgb(255, 255, 255)","r":"12px"}]}

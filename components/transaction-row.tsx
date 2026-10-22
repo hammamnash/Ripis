@@ -1,3 +1,4 @@
+import { ArrowRightLeft, CircleArrowDown, CircleArrowUp } from "lucide-react";
 import Link from "next/link";
 
 import { Amount } from "@/components/amount";
@@ -38,11 +39,16 @@ export function TransactionRow({
       data-slot="transaction-row"
       className="flex items-center justify-between gap-4 px-4 py-3"
     >
-      <div className="min-w-0">
+      <div className="flex min-w-0 items-center gap-3">
+        <span data-slot="transaction-icon" className="flex size-9 shrink-0 items-center justify-center rounded-full bg-insight text-ink">
+          {transaction.transactionType === "income" ? <CircleArrowUp aria-hidden className="size-5" /> : transaction.transactionType === "expense" ? <CircleArrowDown aria-hidden className="size-5" /> : <ArrowRightLeft aria-hidden className="size-5" />}
+        </span>
+        <div className="min-w-0">
         <p className="truncate text-body text-ink">{transaction.description ?? title}</p>
         <p className="mt-0.5 truncate text-caption text-ash">
-          {transaction.description === null ? walletName : `${title} · ${walletName}`}
+          {transaction.notes ? `${title} · ${walletName} · ${transaction.notes}` : `${title} · ${walletName}`}
         </p>
+        </div>
       </div>
       <Amount
         value={transaction.amount}
