@@ -37,16 +37,16 @@ export function TransactionRow({
     <Link
       href={`/transactions/${transaction.id}`}
       data-slot="transaction-row"
-      className="flex items-center justify-between gap-4 px-4 py-3"
+      className="flex items-center justify-between gap-4 px-2 py-2"
     >
-      <div className="flex min-w-0 items-center gap-3">
-        <span data-slot="transaction-icon" className="flex size-9 shrink-0 items-center justify-center rounded-full bg-insight text-ink">
+      <div className="flex min-w-0 items-center gap-2">
+        <span data-slot="transaction-icon" className="flex size-9 shrink-0 items-center justify-center rounded-pill bg-blush text-ink">
           {transaction.transactionType === "income" ? <CircleArrowUp aria-hidden className="size-5" /> : transaction.transactionType === "expense" ? <CircleArrowDown aria-hidden className="size-5" /> : <ArrowRightLeft aria-hidden className="size-5" />}
         </span>
         <div className="min-w-0">
-        <p className="truncate text-body text-ink">{transaction.description ?? title}</p>
+        <p className="truncate text-body text-ink">{transaction.notes ?? title}</p>
         <p className="mt-0.5 truncate text-caption text-ash">
-          {transaction.notes ? `${title} · ${walletName} · ${transaction.notes}` : `${title} · ${walletName}`}
+          {transaction.notes ? `${walletName} · ${title}` : `${title} · ${walletName}`}
         </p>
         </div>
       </div>

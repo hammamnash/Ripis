@@ -19,7 +19,7 @@ datasource db {
 /// `suffix` decides where the mark sits (ADR-0032), and exists so that placement is data rather
 /// than a branch inside the one formatter.
 model Currency {
-  code       String @id
+  code       String  @id
   name       String
   symbol     String
   minor_unit Int
@@ -30,8 +30,9 @@ model Currency {
   users   User[]
   wallets Wallet[]
 
-  transactions      Transaction[] @relation("transaction_currency")
-  base_transactions Transaction[] @relation("transaction_base_currency")
+  transactions      Transaction[]     @relation("transaction_currency")
+  base_transactions Transaction[]     @relation("transaction_base_currency")
+  balance_snapshots BalanceSnapshot[]
 
   @@map("currency")
 }
@@ -49,12 +50,13 @@ model User {
   timezone            String   @default("Asia/Jakarta")
   created_at          DateTime @default(now()) @db.Timestamptz
 
-  primaryCurrency Currency @relation(fields: [primary_currency_id], references: [code])
-  wallets         Wallet[]
-  categories      Category[]
-  transactions    Transaction[]
-  budgets         Budget[]
-  sessions        Session[]
+  primaryCurrency   Currency          @relation(fields: [primary_currency_id], references: [code])
+  wallets           Wallet[]
+  categories        Category[]
+  transactions      Transaction[]
+  budgets           Budget[]
+  sessions          Session[]
+  balance_snapshots BalanceSnapshot[]
 
   @@map("user")
 }
@@ -70,34 +72,55 @@ enum Role {
 /// subtracted from net worth (ADR-0025): `value = is_liability ? -balance : +balance`, computed
 /// once. Direction is never carried by the sign of `balance`.
 model Wallet {
-  id          String     @id @default(uuid()) @db.Uuid
-  user_id     String     @db.Uuid
-  name        String
-  wallet_type WalletType
+  id              String     @id @default(uuid()) @db.Uuid
+  user_id         String     @db.Uuid
+  name            String
+  wallet_type     WalletType
   /// Required, never inferred from the balance, and not re-derived from `wallet_type` after
   /// creation (ADR-0025) — only Investment Account and Other have no pre-fill.
-  is_liability  Boolean
-  currency_id   String
+  is_liability    Boolean
+  currency_id     String
   /// Immutable after creation. `current_balance` is stored and recomputed in ONE place.
-  opening_balance Decimal @db.Decimal(19, 4)
-  current_balance Decimal @db.Decimal(19, 4)
+  opening_balance Decimal    @db.Decimal(19, 4)
+  current_balance Decimal    @db.Decimal(19, 4)
   institution     String?
   notes           String?
   /// Archived to the side — NOT deleted. Distinct from `deleted_at`: an inactive wallet stays in
   /// history and out of pickers, a soft-deleted one leaves every list (`02-context.md` §3).
-  active     Boolean   @default(true)
-  deleted_at DateTime? @db.Timestamptz
-  created_at DateTime  @default(now()) @db.Timestamptz
-  updated_at DateTime  @updatedAt @db.Timestamptz
+  active          Boolean    @default(true)
+  deleted_at      DateTime?  @db.Timestamptz
+  created_at      DateTime   @default(now()) @db.Timestamptz
+  updated_at      DateTime   @updatedAt @db.Timestamptz
 
   user     User     @relation(fields: [user_id], references: [id])
   currency Currency @relation(fields: [currency_id], references: [code])
 
-  transactions          Transaction[] @relation("source")
-  incoming_transactions Transaction[] @relation("destination")
+  transactions          Transaction[]     @relation("source")
+  incoming_transactions Transaction[]     @relation("destination")
+  balance_snapshots     BalanceSnapshot[]
 
   @@index([user_id, deleted_at])
   @@map("wallet")
+}
+
+model BalanceSnapshot {
+  id           String   @id @default(uuid()) @db.Uuid
+  user_id      String   @db.Uuid
+  wallet_id    String   @db.Uuid
+  month        DateTime @db.Date
+  currency_id  String
+  balance      Decimal  @db.Decimal(19, 4)
+  value        Decimal  @db.Decimal(19, 4)
+  is_liability Boolean
+  captured_at  DateTime @default(now()) @db.Timestamptz
+
+  user     User     @relation(fields: [user_id], references: [id])
+  wallet   Wallet   @relation(fields: [wallet_id], references: [id])
+  currency Currency @relation(fields: [currency_id], references: [code])
+
+  @@unique([user_id, wallet_id, month])
+  @@index([user_id, month])
+  @@map("balance_snapshot")
 }
 
 enum WalletType {

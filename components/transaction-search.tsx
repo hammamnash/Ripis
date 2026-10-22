@@ -10,8 +10,6 @@ export function TransactionSearch() {
   const initial = params.get("q") ?? "";
   const [value, setValue] = useState(initial);
 
-  useEffect(() => setValue(initial), [initial]);
-
   useEffect(() => {
     const timer = window.setTimeout(() => {
       if (value === initial) return;

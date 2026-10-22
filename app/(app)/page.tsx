@@ -3,7 +3,8 @@ import Link from "next/link";
 import { connection } from "next/server";
 
 import { BudgetBar } from "@/components/budget-bar";
-import { ChartCard } from "@/components/chart-card";
+import { DashboardCharts } from "@/components/dashboard-charts";
+import { NetWorthHistoryChart } from "@/components/net-worth-history-chart";
 import { EmptyState } from "@/components/empty-state";
 import { NetWorthHero } from "@/components/net-worth-hero";
 import { ShellHeader } from "@/components/shell/header";
@@ -16,6 +17,8 @@ import { runAsCaller } from "@/src/server/context";
 import { db } from "@/src/server/db";
 import { categoryBreakdown } from "@/src/server/reports/category-breakdown";
 import { readReportQuery } from "@/src/server/reports/filter";
+import { trends } from "@/src/server/reports/trends";
+import { netWorthHistory, captureCurrentNetWorth } from "@/src/server/reports/net-worth-history";
 import { walletSummary } from "@/src/server/reports/wallet-summary";
 import { calendarDate } from "@/src/server/time/calendar-date";
 
@@ -36,14 +39,23 @@ export default async function DashboardPage() {
   const month = calendarDate(new Date()).slice(0, 7);
   const query = readReportQuery(new URLSearchParams({ month }));
 
+  const currentMonth = new Date(`${month}-01T00:00:00Z`);
+  const sixMonthsAgo = new Date(Date.UTC(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth() - 5, 1));
+  const nextMonth = new Date(Date.UTC(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth() + 1, 1));
+  const trendTo = new Date(Date.UTC(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth() + 1, 0));
+  const historyFrom = new Date(Date.UTC(currentMonth.getUTCFullYear(), currentMonth.getUTCMonth() - 5, 1));
+  const trendQuery = new URLSearchParams({ from: sixMonthsAgo.toISOString().slice(0, 10), to: trendTo.toISOString().slice(0, 10), granularity: "month", metric: "expense" });
   const data = await runAsCaller(caller, async () => {
-    const [summary, budgets, spending, currencies] = await Promise.all([
+    await captureCurrentNetWorth(currentMonth);
+    const [summary, budgets, spending, trend, currencies, history] = await Promise.all([
       walletSummary(readReportQuery(new URLSearchParams())),
       listBudgets(readBudgetMonth(new URLSearchParams({ month }))),
       categoryBreakdown(query, "expense"),
+      trends({ ...readReportQuery(trendQuery), metric: "expense" }),
       db.currency.findMany({ select: { code: true, symbol: true, suffix: true, minor_unit: true } }),
+      netWorthHistory(historyFrom, nextMonth),
     ]);
-    return { summary, budgets, spending, currencies };
+    return { summary, budgets, spending, trend, currencies, history };
   });
 
   /* A currency's key is its code, so this map is keyed by one — `currencyId` on the wire *is* `IDR`. */
@@ -53,6 +65,7 @@ export default async function DashboardPage() {
   };
 
   const primary = display(data.summary.currency);
+  const visibleWallets = data.summary.wallets.filter((wallet) => !isZeroMoney(wallet.currentBalance));
   const others = data.summary.currencies
     .filter((bucket) => !bucket.isPrimary)
     .map((bucket) => bucket.currencyId);
@@ -71,8 +84,8 @@ export default async function DashboardPage() {
       />
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-subheading text-ink">Wallets</h2>
-        {data.summary.wallets.length === 0 ? (
+        <div className="flex items-baseline justify-between"><h2 className="text-subheading text-ink">Wallets</h2><Link href="/wallets" className="text-caption text-ink">All wallets →</Link></div>
+        {visibleWallets.length === 0 ? (
           <EmptyState icon={Wallet} title="No wallets yet">
             <Link href="/wallets" className="text-ink underline">
               Add your first wallet
@@ -80,24 +93,23 @@ export default async function DashboardPage() {
             to start counting.
           </EmptyState>
         ) : (
-          data.summary.wallets.map((wallet) => (
+          visibleWallets.map((wallet) => (
             <WalletCard key={wallet.id} wallet={wallet} currency={display(wallet.currencyId)} />
           ))
         )}
       </section>
 
-      {data.budgets.length > 0 ? (
-        <section className="flex flex-col gap-4">
-          <h2 className="text-subheading text-ink">Budgets</h2>
-          {data.budgets.map((bar) => (
-            <BudgetBar key={bar.id} bar={bar} currency={primary} />
-          ))}
-        </section>
-      ) : null}
+      <section className="flex flex-col gap-4">
+        <div className="flex items-baseline justify-between"><h2 className="text-subheading text-ink">Budgets</h2><Link href="/budgets" className="text-caption text-ink">Budgets →</Link></div>
+        {data.budgets.length > 0 ? data.budgets.map((bar) => <BudgetBar key={bar.id} bar={bar} currency={primary} />) : <p className="rounded-[16px] border border-hairline bg-card p-5 text-body text-ash">No budget set for {month}.</p>}
+      </section>
 
-      {data.spending.rows.length > 0 ? (
-        <ChartCard title="Where it went" rows={data.spending.rows} currency={primary} />
-      ) : null}
+      <DashboardCharts spending={data.spending} trend={data.trend.points} currency={primary} monthLabel={month} />
+      <NetWorthHistoryChart points={data.history} currency={primary} />
     </div>
   );
+}
+
+function isZeroMoney(value: string): boolean {
+  return value.replace(/[+\-\.\s]/g, "").split("").every((digit) => digit === "0");
 }
