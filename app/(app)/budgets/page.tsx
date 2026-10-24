@@ -33,6 +33,9 @@ function fromScaled(scaled: bigint): string {
   return `${negative ? "-" : ""}${text.slice(0, -SCALE)}.${text.slice(-SCALE)}`;
 }
 
+/* Per segment, like the `connection()` call it accompanies: the frame's opt-out does not reach this file. */
+export const instant = false;
+
 export default async function BudgetsPage({ searchParams }: PageProps<"/budgets">) {
   await connection();
   const { caller } = await requireScreenSession();

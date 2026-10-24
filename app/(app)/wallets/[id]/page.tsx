@@ -20,6 +20,9 @@ const LABELS: Record<string, string> = {
   other: "Other",
 };
 
+/* Per segment, like the `connection()` call it accompanies: the frame's opt-out does not reach this file. */
+export const instant = false;
+
 export default async function WalletDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await connection();
   const { caller } = await requireScreenSession();

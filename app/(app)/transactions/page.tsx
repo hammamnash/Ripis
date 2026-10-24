@@ -29,6 +29,9 @@ import type { TransactionResponse } from "@/src/server/transactions/serialise";
  * The rows arrive with ids and no names, so this screen joins them. That join is the page's job: the list
  * module knows nothing about what a wallet is called, and the row knows nothing about the database.
  */
+/* Per segment, like the `connection()` call it accompanies: the frame's opt-out does not reach this file. */
+export const instant = false;
+
 export default async function TransactionsPage({ searchParams }: PageProps<"/transactions">) {
   /* Request data, twice over: `searchParams` and the fallback month, which is whatever month it is now. Next
      still attempted a prerender pass here and logged `unstable value new Date()` for every navigation to this

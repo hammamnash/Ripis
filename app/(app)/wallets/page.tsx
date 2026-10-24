@@ -13,6 +13,9 @@ import { readReportQuery } from "@/src/server/reports/filter";
 import { walletSummary } from "@/src/server/reports/wallet-summary";
 import type { WalletResponse } from "@/src/server/wallets/serialise";
 
+/* Per segment, like the `connection()` call it accompanies: the frame's opt-out does not reach this file. */
+export const instant = false;
+
 export default async function WalletsPage() {
   await connection();
   const { caller } = await requireScreenSession();

@@ -32,6 +32,9 @@ import { calendarDate } from "@/src/server/time/calendar-date";
  * Every number here is read from the module the endpoint calls (ADR-0039) — the page composes, it does not
  * compute. The only arithmetic in this file is a Map lookup for a currency's symbol.
  */
+/* Per segment, like the `connection()` call it accompanies: the frame's opt-out does not reach this file. */
+export const instant = false;
+
 export default async function DashboardPage() {
   await connection();
   const { caller } = await requireScreenSession();

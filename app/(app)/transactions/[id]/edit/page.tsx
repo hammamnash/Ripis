@@ -14,6 +14,9 @@ import { editTransactionAction } from "./actions";
  * rule the create path enforces runs again on submit (`updateTransaction` → `prepareTransaction`), so this
  * screen cannot be a way to build a transaction that could not have been created.
  */
+/* Per segment, like the `connection()` call it accompanies: the frame's opt-out does not reach this file. */
+export const instant = false;
+
 export default async function EditTransactionPage({ params }: PageProps<"/transactions/[id]/edit">) {
   await connection();
   const { caller } = await requireScreenSession();

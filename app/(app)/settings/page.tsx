@@ -17,6 +17,9 @@ import { calendarDate } from "@/src/server/time/calendar-date";
  * beside it. Categories and reminders stay owed: they are screens 9 and 10's own features, and the
  * rail already reaches them.
  */
+/* Per segment, like the `connection()` call it accompanies: the frame's opt-out does not reach this file. */
+export const instant = false;
+
 export default async function SettingsPage() {
   await connection();
   const { caller } = await requireScreenSession();

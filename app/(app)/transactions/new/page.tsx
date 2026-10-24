@@ -12,6 +12,9 @@ import { calendarDate } from "@/src/server/time/calendar-date";
  * categories for the pickers and nothing else: the form holds no money in state, and every figure it posts
  * is a string the server parses once.
  */
+/* Per segment, like the `connection()` call it accompanies: the frame's opt-out does not reach this file. */
+export const instant = false;
+
 export default async function NewTransactionPage() {
   await connection();
   const { caller } = await requireScreenSession();

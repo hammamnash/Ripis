@@ -12,6 +12,9 @@ import { runAsCaller } from "@/src/server/context";
 import { db } from "@/src/server/db";
 import { getTransaction } from "@/src/server/transactions/read-transactions";
 
+/* Per segment, like the `connection()` call it accompanies: the frame's opt-out does not reach this file. */
+export const instant = false;
+
 export default async function TransactionDetailPage({ params }: PageProps<"/transactions/[id]">) {
   await connection();
   const { caller } = await requireScreenSession();
