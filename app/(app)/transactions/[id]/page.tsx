@@ -46,7 +46,7 @@ export default async function TransactionDetailPage({ params }: PageProps<"/tran
 
   return (
     <>
-      <ShellHeader title="Transaction" />
+      <ShellHeader title="Transaction" variant="nested" backHref="/transactions" />
       <section data-slot="transaction-detail" className="flex flex-col gap-6 rounded-[16px] border border-hairline bg-card p-5">
         <div className="flex flex-col gap-1">
           <p className="text-caption text-ash">{transaction.transactionType}</p>
@@ -69,7 +69,7 @@ export default async function TransactionDetailPage({ params }: PageProps<"/tran
           <Amount value={transaction.baseAmount} currency={display(transaction.baseCurrencyId)} className="text-caption text-ink" />
         </p>
       </section>
-      <div className="px-4">
+      <div className="px-4 md:max-w-[720px] md:px-6">
         <Link
           href={`/transactions/${transaction.id}/edit`}
           data-slot="edit-transaction"
@@ -78,7 +78,7 @@ export default async function TransactionDetailPage({ params }: PageProps<"/tran
           Edit this transaction
         </Link>
       </div>
-      <details data-slot="delete-transaction" className="px-4 pb-10">
+      <details data-slot="delete-transaction" className="px-4 pb-10 md:max-w-[720px] md:px-6 md:pb-12">
         <summary className="cursor-pointer text-caption text-ash">Delete this transaction</summary>
         <form action={removeTransaction} className="pt-3">
           <input type="hidden" name="id" value={transaction.id} />

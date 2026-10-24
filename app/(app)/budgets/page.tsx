@@ -1,4 +1,5 @@
 import { ChartPie } from "lucide-react";
+import Link from "next/link";
 import { connection } from "next/server";
 
 import { Amount } from "@/components/amount";
@@ -6,6 +7,7 @@ import { BudgetBar } from "@/components/budget-bar";
 import { EmptyState } from "@/components/empty-state";
 import { MonthSelector } from "@/components/month-selector";
 import { ShellHeader } from "@/components/shell/header";
+import { Button } from "@/components/ui/button";
 import type { CurrencyDisplay } from "@/src/lib/display-money";
 import { requireScreenSession } from "@/src/server/auth/require-screen";
 import { listBudgets } from "@/src/server/budgets/list-budgets";
@@ -67,18 +69,37 @@ export default async function BudgetsPage({ searchParams }: PageProps<"/budgets"
 
   return (
     <>
-      <ShellHeader title="Budgets">
+      <ShellHeader
+        title="Budgets"
+        action={
+          <Button asChild variant="tertiary" className="h-11 shrink-0 px-3 text-small">
+            <Link href={`/budgets/new?month=${month}`} data-testid="budget-add">
+              Add
+            </Link>
+          </Button>
+        }
+      >
         <MonthSelector month={month} basePath="/budgets" />
       </ShellHeader>
 
       {data.budgets.length === 0 ? (
-        <div className="px-4 py-10">
-          <EmptyState icon={ChartPie} title="No budgets this month">
+        <div className="px-4 py-10 md:px-6">
+          <EmptyState
+            icon={ChartPie}
+            title="No budgets this month"
+            action={
+              <Button asChild>
+                <Link href={`/budgets/new?month=${month}`} data-testid="budget-add-empty">
+                  Add budget
+                </Link>
+              </Button>
+            }
+          >
             Set a monthly limit per category to see how the month is tracking before it is over.
           </EmptyState>
         </div>
       ) : (
-        <div className="flex flex-col gap-6 px-4 py-4">
+        <div className="flex flex-col gap-6 px-4 py-4 md:px-6 md:py-6">
           <p data-testid="budget-summary" className="text-caption text-ash">
             <Amount value={spent} currency={display} direction="none" /> spent of{" "}
             <Amount value={budgeted} currency={display} /> budgeted
@@ -86,7 +107,18 @@ export default async function BudgetsPage({ searchParams }: PageProps<"/budgets"
 
           <div className="flex flex-col gap-5">
             {data.budgets.map((bar) => (
-              <BudgetBar key={bar.id} bar={bar} currency={display} />
+              /* The whole bar is the target, because the row *is* the budget: tapping it opens the one
+                 thing that can be changed about it — its limit. The month is not in the link; the budget
+                 already names its own (see `budgets/[id]/edit`). */
+              <Link
+                key={bar.id}
+                href={`/budgets/${bar.id}/edit`}
+                data-testid="budget-bar-link"
+                className="block rounded-input"
+              >
+                <BudgetBar bar={bar} currency={display} />
+                <span className="sr-only">Edit budget</span>
+              </Link>
             ))}
           </div>
         </div>

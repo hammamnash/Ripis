@@ -24,6 +24,13 @@ export interface TransactionQuery {
   from?: string;
   to?: string;
   type?: string;
+  /**
+   * A set of types, for the one filter the screen states as a single control: the list's **Transfer** chip
+   * means "money moved", and an `exchange` is the same movement between two currencies. Naming both here
+   * rather than teaching the screen to merge two responses keeps the count and the rows impossible to disagree.
+   * Ignored when `type` is given — one type is the narrower statement.
+   */
+  typeIn?: string[];
   walletId?: string;
   categoryId?: string;
   tag?: string;
@@ -76,11 +83,18 @@ function where(query: TransactionQuery): Prisma.TransactionWhereInput {
     filter.occurred_on = { ...(filter.occurred_on as object), lte: parseCalendarDate(query.to, 'to') };
   }
 
-  if (query.type !== undefined) {
-    if (!(TYPES as string[]).includes(query.type)) {
-      throw new ApiError('validation_failed', 400, 'That is not a transaction type this app knows.', 'type');
+  /* `type` is the narrow form and `typeIn` the wide one; collapsing them here means the validation, the filter
+     and the count all read the same list. */
+  const types = query.type !== undefined ? [query.type] : query.typeIn;
+
+  if (types !== undefined && types.length > 0) {
+    for (const type of types) {
+      if (!(TYPES as string[]).includes(type)) {
+        throw new ApiError('validation_failed', 400, 'That is not a transaction type this app knows.', 'type');
+      }
     }
-    filter.transaction_type = query.type as TxType;
+
+    filter.transaction_type = types.length === 1 ? (types[0] as TxType) : { in: types as TxType[] };
   }
 
   if (query.walletId !== undefined) {
@@ -138,12 +152,23 @@ function where(query: TransactionQuery): Prisma.TransactionWhereInput {
     // unindexed, which is how `merchant` arrived) turns this into a sequential scan of the ledger, and
     // nothing in the response would say so. `location`, `project` and `receipt_number` are stored on the
     // row and are deliberately not searched — §13 does not name them.
+    //
+    // The row's **caption** — the category's name and the wallets it moved between — is searched as well.
+    // Those names are what the row actually shows, so a search that could not find "Transport" while every
+    // Transport row sat on screen reads as broken, and the names only exist on joined tables. No trigram
+    // index reaches them; `category` and `wallet` are tiny per-user tables compared by primary key, so the
+    // month bounds still decide how many transaction rows are read before the join happens.
+    const contains = { contains: query.search.trim(), mode: 'insensitive' } as const;
+
     filter.AND = [
       {
         OR: [
-          { description: { contains: query.search, mode: 'insensitive' } },
-          { notes: { contains: query.search, mode: 'insensitive' } },
-          { merchant: { contains: query.search, mode: 'insensitive' } },
+          { description: contains },
+          { notes: contains },
+          { merchant: contains },
+          { category: { is: { name: contains } } },
+          { wallet: { is: { name: contains } } },
+          { destination: { is: { name: contains } } },
         ],
       },
     ];

@@ -61,3 +61,26 @@ test("a transaction entered on the form is filed and listed", async ({ page }) =
   await expect(page.getByText("Recorded in the base currency as")).toBeVisible();
   await expect(page.getByText("250.000").first()).toBeVisible();
 });
+
+/*
+ * The row prints its category and wallet on the caption line, so a search that could not find either of them
+ * reported "no matching rows" while the matching row sat on screen — the caption is what `?q=` has to reach
+ * (FR-13), not only the free-text columns.
+ */
+test("search matches the row's caption, and back returns to the filtered list", async ({ page }) => {
+  await page.goto(`/transactions?q=${encodeURIComponent(CATEGORY)}`);
+  await expect(page.getByText("Verification expense")).toBeVisible();
+
+  await page.goto(`/transactions?q=${encodeURIComponent(WALLET)}`);
+  await expect(page.getByText("Verification expense")).toBeVisible();
+
+  await page.getByText("Verification expense").click();
+  const back = page.getByTestId("shell-back");
+  await expect(back).toBeVisible();
+  await back.click();
+
+  /* Back steps through history rather than hard-linking to a bare list: the filter the user left is still in
+     the previous entry, and a back button that quietly drops it is a back button that loses their place. */
+  await expect(page).toHaveURL(/\/transactions\?q=Verification/);
+  await expect(page.getByText("Verification expense")).toBeVisible();
+});

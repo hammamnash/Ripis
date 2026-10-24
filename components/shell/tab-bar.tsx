@@ -1,9 +1,10 @@
 "use client";
 
 import { cn } from "cn";
-import { ArrowLeftRight, ChartPie, House, Settings, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+
+import { isActive, NAV_ITEMS } from "@/components/shell/nav";
 
 /*
  * §6 "Bottom Tab Bar" — five items, always. The height is 64px *plus* the safe-area inset, so the
@@ -22,15 +23,10 @@ import { usePathname } from "next/navigation";
  *
  * There is no sixth item. Recurring (screen 10) is V1.1, and a disabled tab for a screen that does
  * not exist is a promise the rail cannot keep.
+ *
+ * From 768px up the bar is gone and `SideRail` carries the same five items — the list lives in
+ * `nav.ts` so the two never disagree about the frame's destinations.
  */
-const TABS = [
-  { href: "/", label: "Dashboard", icon: House },
-  { href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
-  { href: "/budgets", label: "Budgets", icon: ChartPie },
-  { href: "/wallets", label: "Wallets", icon: Wallet },
-  { href: "/settings", label: "Settings", icon: Settings },
-] as const;
-
 export function TabBar() {
   const pathname = usePathname();
 
@@ -39,12 +35,10 @@ export function TabBar() {
       aria-label="Primary"
       data-slot="tab-bar"
       data-testid="tab-bar"
-      className="fixed inset-x-0 bottom-0 z-40 flex h-[calc(var(--tabbar-height)+env(safe-area-inset-bottom))] border-t border-border bg-card pb-[env(safe-area-inset-bottom)]"
+      className="fixed inset-x-0 bottom-0 z-40 flex h-[calc(var(--tabbar-height)+env(safe-area-inset-bottom))] border-t border-border bg-card pb-[env(safe-area-inset-bottom)] md:hidden"
     >
-      {TABS.map(({ href, label, icon: Icon }) => {
-        /* "/" would otherwise match every route, so the dashboard is exact and the rest match their
-           subtree — /transactions/new keeps Transactions lit. */
-        const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+      {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+        const active = isActive(pathname, href);
 
         return (
           <Link

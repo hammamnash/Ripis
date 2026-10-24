@@ -34,7 +34,9 @@ export default async function SettingsPage() {
     <>
       <ShellHeader title="Settings" />
 
-      <div className="flex flex-col gap-8 px-4 py-6">
+      {/* Reading width, not column width: a password field or a three-way theme switch 1,120px wide is a
+          control nobody can scan. Left-aligned under the header so the title and the rows share an edge. */}
+      <div className="flex flex-col gap-8 px-4 py-6 md:max-w-[720px] md:px-6 md:py-8">
         <SettingsAccount
           name={account.name}
           email={account.email}

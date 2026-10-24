@@ -115,6 +115,20 @@ export function amountParts(
 }
 
 /**
+ * A stored amount as a form field's prefill: `2000000`, not `2000000.0000`.
+ *
+ * `money()` is a four-decimal wire form because that is what the column holds (§6.1), and four decimal
+ * places in a text box is the storage precision leaking into the screen. Trimming them changes no money:
+ * every parser that reads the field back accepts either spelling.
+ */
+export function trimMoney(value: string | null): string | null {
+  if (value === null) return value;
+  if (!value.includes('.')) return value;
+
+  return value.replace(/0+$/, '').replace(/\.$/, '');
+}
+
+/**
  * `45%`, `104%`, `99,5%` — a budget's percentage as a person reads it.
  *
  * The API's `percent` is two decimal places for comparison (`budgetStanding`), and two decimals on a bar

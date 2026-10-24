@@ -1,4 +1,5 @@
 import { Fab } from "@/components/shell/fab";
+import { SideRail } from "@/components/shell/side-rail";
 import { TabBar } from "@/components/shell/tab-bar";
 import { Toaster } from "@/components/ui/sonner";
 import { connection } from "next/server";
@@ -19,10 +20,15 @@ import { requireScreenSession } from "../../src/server/auth/require-screen";
 export const instant = false;
 
 /*
- * §6's frame. The shell is the three fixed things — tab bar, FAB, toasts — plus the scroll the
- * screens live in; the header belongs to the screen (`ShellHeader`), because in the App Router a
- * layout cannot read the page's props and a header that guessed the title would be a second source
- * of truth for something every screen already knows.
+ * §6's frame. The shell is the fixed things — the phone's tab bar, the desktop rail, the FAB, the
+ * toasts — plus the scroll the screens live in; the header belongs to the screen (`ShellHeader`),
+ * because in the App Router a layout cannot read the page's props and a header that guessed the title
+ * would be a second source of truth for something every screen already knows.
+ *
+ * The navigation is one of two presentations of the same five items, never both: `TabBar` below
+ * 768px and `SideRail` from 768px up, where §2.4 also widens the gutter to 24px. The content column
+ * is capped by `--content-max` and centred inside whatever the rail leaves, so the frame reads the
+ * same on a 430px phone and a 2560px monitor.
  *
  * `min-h-dvh`, not `min-h-screen`: 100vh on mobile Safari is the height *including* the
  * retractable chrome, so a `100vh` shell starts out taller than the viewport and the tab bar sits
@@ -46,9 +52,13 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   await requireScreenSession();
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <main className="flex-1 pb-[calc(var(--tabbar-height)+env(safe-area-inset-bottom)+32px)]">
-        {children}
+    <div className="flex min-h-dvh flex-col md:pl-[var(--rail-width)]">
+      <SideRail />
+
+      {/* The column is what keeps a 2560px monitor from stretching a 15px label across the room; the
+          three widths below 1120px are unaffected, and a phone loses nothing to it. */}
+      <main className="flex-1 pb-[calc(var(--tabbar-height)+env(safe-area-inset-bottom)+32px)] md:pb-16">
+        <div className="mx-auto w-full max-w-[var(--content-max)]">{children}</div>
       </main>
 
       <TabBar />

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { amountParts, MINUS, percentText } from './display-money';
+import { amountParts, MINUS, percentText, trimMoney } from './display-money';
 
 const IDR = { symbol: 'Rp', suffix: false, minorUnit: 0 };
 const USD = { symbol: '$', suffix: false, minorUnit: 2 };
@@ -81,5 +81,18 @@ describe('percentText', () => {
 
   it('refuses anything that is not a decimal percentage', () => {
     expect(() => percentText('x')).toThrow(/Not a decimal percentage/);
+  });
+});
+
+describe('trimMoney', () => {
+  it('drops the four decimal places the wire carries', () => {
+    expect(trimMoney('2000000.0000')).toBe('2000000');
+    expect(trimMoney('1250.5000')).toBe('1250.5');
+    expect(trimMoney('0.0001')).toBe('0.0001');
+  });
+
+  it('leaves a value that is already plain alone, and passes null through', () => {
+    expect(trimMoney('2000000')).toBe('2000000');
+    expect(trimMoney(null)).toBeNull();
   });
 });

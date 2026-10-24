@@ -321,18 +321,29 @@ describe("the shell uses only tokens that exist (no silent no-op classes)", () =
   });
 });
 
-describe("the rail is V1 only (§7: Recurring is a V1.1 screen)", () => {
-  const tabBar = stripComments(
-    readFileSync(new URL("../../components/shell/tab-bar.tsx", import.meta.url), "utf8"),
+describe("the navigation is V1 only (§7: Recurring is a V1.1 screen)", () => {
+  /* The list moved into `nav.ts` when the desktop rail arrived: the tab bar and the rail are two
+     presentations of one list, and an assertion that read only one of them would let the other drift. */
+  const nav = stripComments(
+    readFileSync(new URL("../../components/shell/nav.ts", import.meta.url), "utf8"),
   );
 
   it("offers exactly the five screens V1 ships, in order", () => {
-    const labels = [...tabBar.matchAll(/label:\s*"([^"]+)"/g)].map((m) => m[1]);
+    const labels = [...nav.matchAll(/label:\s*"([^"]+)"/g)].map((m) => m[1]);
     expect(labels).toEqual(["Dashboard", "Transactions", "Budgets", "Wallets", "Settings"]);
   });
 
   it("carries no Recurring entry", () => {
-    expect(tabBar).not.toMatch(/recurring/i);
+    expect(nav).not.toMatch(/recurring/i);
+  });
+
+  it("feeds both the phone's tab bar and the desktop rail", () => {
+    for (const file of ["tab-bar.tsx", "side-rail.tsx"]) {
+      const source = stripComments(
+        readFileSync(new URL(`../../components/shell/${file}`, import.meta.url), "utf8"),
+      );
+      expect(source, `${file} does not read the shared list`).toMatch(/NAV_ITEMS/);
+    }
   });
 });
 

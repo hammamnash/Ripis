@@ -44,13 +44,13 @@ export default async function WalletsPage() {
       <ShellHeader title="Wallets" />
 
       {data.summary.wallets.length === 0 ? (
-        <div className="px-4 py-10">
+        <div className="px-4 py-10 md:px-6">
           <EmptyState icon={Wallet} title="No wallets yet">
             A wallet is where money sits. Add one and the totals below start meaning something.
           </EmptyState>
         </div>
       ) : (
-        <div className="flex flex-col gap-6 px-4 pb-10 pt-2">
+        <div className="flex flex-col gap-6 px-4 pb-10 pt-2 md:px-6 md:pb-12 md:pt-4">
           <div
             data-slot="net-worth-line"
             className="flex items-baseline justify-between gap-3 rounded-[16px] border border-hairline bg-card px-4 py-3"
@@ -81,9 +81,13 @@ function WalletGroup({
   return (
     <section data-slot="wallet-group" className="flex flex-col gap-3">
       <h2 className="text-caption uppercase text-ash">{title}</h2>
-      {wallets.map((wallet) => (
-        <WalletCard key={wallet.id} wallet={wallet} currency={display(wallet.currencyId)} />
-      ))}
+      {/* Two across from 768px up: a wallet card is a name and a figure, which leaves a phone's worth of
+          width empty on a desktop column. */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        {wallets.map((wallet) => (
+          <WalletCard key={wallet.id} wallet={wallet} currency={display(wallet.currencyId)} />
+        ))}
+      </div>
     </section>
   );
 }

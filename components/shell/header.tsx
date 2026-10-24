@@ -1,7 +1,7 @@
 import { cn } from "cn";
-import { ChevronLeft } from "lucide-react";
-import Link from "next/link";
 import type { ReactNode } from "react";
+
+import { BackButton } from "@/components/shell/back-button";
 
 /*
  * §6 "Header": sticky, `--surface-canvas` (not Paper) with a hairline bottom border, "so it
@@ -45,19 +45,8 @@ export function ShellHeader({
       data-testid="shell-header"
       className={cn("sticky top-0 z-30 border-b border-border bg-canvas", className)}
     >
-      <div className="flex min-h-[var(--target-min)] items-center gap-2 px-4 py-3">
-        {backHref ? (
-          <Link
-            href={backHref}
-            aria-label="Back"
-            data-testid="shell-back"
-            /* -ml-2 keeps the 44px target from pushing the title away from the gutter; the target
-               is what a thumb hits, the gutter is what the eye sees. */
-            className="-ml-2 flex size-[var(--target-min)] shrink-0 items-center justify-center rounded-pill text-ink"
-          >
-            <ChevronLeft aria-hidden className="size-6" />
-          </Link>
-        ) : null}
+      <div className="relative flex min-h-[var(--target-min)] items-center gap-2 px-4 py-3 md:px-6">
+        {backHref ? <BackButton href={backHref} /> : null}
 
         <h1
           className={cn(

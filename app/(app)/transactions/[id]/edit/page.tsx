@@ -3,6 +3,7 @@ import { connection } from "next/server";
 
 import { ShellHeader } from "@/components/shell/header";
 import { TransactionForm } from "@/components/transaction-form";
+import { trimMoney } from "@/src/lib/display-money";
 import { requireScreenSession } from "@/src/server/auth/require-screen";
 import { runAsCaller } from "@/src/server/context";
 import { db } from "@/src/server/db";
@@ -79,15 +80,4 @@ export default async function EditTransactionPage({ params }: PageProps<"/transa
       />
     </>
   );
-}
-
-/*
- * `money()` is a 4-dp string because that is what the ledger stores; a field showing `7000.0000` is the
- * stored precision leaking into a text box. Trailing zeros are display noise, and the parse in the action
- * accepts either spelling, so trimming here changes no money.
- */
-function trimMoney(value: string | null): string | null {
-  if (value === null) return null;
-  if (!value.includes(".")) return value;
-  return value.replace(/0+$/, "").replace(/\.$/, "");
 }

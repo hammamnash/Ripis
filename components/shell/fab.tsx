@@ -5,6 +5,8 @@ import { Plus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { hidesAdd } from "@/components/shell/nav";
+
 /*
  * §6 "Floating Action Button" — 56px, ink fill, a Paper `+`, at the right gutter. Two offsets are
  * fixed and both matter: 16px from the gutter, and 16px *above the tab bar* — not above the
@@ -18,10 +20,10 @@ import { usePathname } from "next/navigation";
  * disabled and needs no state.
  *
  * Hidden on the add screens themselves — a button that opens the screen you are already on is the
- * one place a FAB is wrong (§6).
+ * one place a FAB is wrong (§6). The list lives in `nav.ts` beside the rail's own "Add transaction"
+ * button, which replaces this one from 768px up: on a wide screen a floating circle lands on top of
+ * the content it is meant to sit beside, and the rail has a column for it.
  */
-const HIDDEN_ON = ["/transactions/new"] as const;
-
 export function Fab({
   href = "/transactions/new",
   label = "Add transaction",
@@ -33,7 +35,7 @@ export function Fab({
 }) {
   const pathname = usePathname();
 
-  if (HIDDEN_ON.some((hidden) => pathname.startsWith(hidden))) return null;
+  if (hidesAdd(pathname)) return null;
 
   return (
     <Link
@@ -46,8 +48,8 @@ export function Fab({
            dark, so an ink-filled circle would carry a Paper glyph into a light-on-light washout.
            `bg-primary` maps to --surface-primary — #0c0a08 in light, #262220 in dark — which is
            the same value §5 uses for the primary pill, and the reason the token exists. */
-        "fixed right-4 z-40 flex size-[var(--fab-size)] items-center justify-center rounded-pill bg-primary text-primary-foreground shadow-raised",
-        "bottom-[calc(var(--tabbar-height)+env(safe-area-inset-bottom)+16px)]",
+        "fixed right-4 bottom-[calc(var(--tabbar-height)+env(safe-area-inset-bottom)+16px)] z-40 flex size-[var(--fab-size)] items-center justify-center rounded-pill bg-primary text-primary-foreground shadow-raised",
+        "md:hidden",
         className,
       )}
     >

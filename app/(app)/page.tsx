@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 
 import { BudgetBar } from "@/components/budget-bar";
+import { CollapsibleSection } from "@/components/collapsible-section";
 import { DashboardCharts } from "@/components/dashboard-charts";
 import { NetWorthHistoryChart } from "@/components/net-worth-history-chart";
 import { EmptyState } from "@/components/empty-state";
@@ -74,42 +75,62 @@ export default async function DashboardPage() {
     .map((bucket) => bucket.currencyId);
 
   return (
-    <div className="flex flex-col gap-6 pb-6">
+    <>
       <ShellHeader title="Dashboard" />
 
-      <NetWorthHero
-        currency={primary}
-        assets={data.summary.assets}
-        liabilities={data.summary.liabilities}
-        netWorth={data.summary.netWorth}
-        walletCount={data.summary.walletCount}
-        others={others}
-      />
+      {/* One column on a phone, the same order as before; two from 1024px up, so the hero, the wallet
+          list and the net-worth trend fill the left half while the budgets and the three charts fill
+          the right. Reading the ledger and reading what it did over the year stay in one column. */}
+      <div className="grid grid-cols-1 gap-6 px-4 pb-6 pt-4 md:gap-8 md:px-6 md:pt-6 lg:grid-cols-2 lg:items-start">
+        <div className="flex flex-col gap-6">
+          <NetWorthHero
+            currency={primary}
+            assets={data.summary.assets}
+            liabilities={data.summary.liabilities}
+            netWorth={data.summary.netWorth}
+            walletCount={data.summary.walletCount}
+            others={others}
+          />
 
-      <section className="flex flex-col gap-3">
-        <div className="flex items-baseline justify-between"><h2 className="text-subheading text-ink">Wallets</h2><Link href="/wallets" className="text-caption text-ink">All wallets →</Link></div>
-        {visibleWallets.length === 0 ? (
-          <EmptyState icon={Wallet} title="No wallets yet">
-            <Link href="/wallets" className="text-ink underline">
-              Add your first wallet
-            </Link>{" "}
-            to start counting.
-          </EmptyState>
-        ) : (
-          visibleWallets.map((wallet) => (
-            <WalletCard key={wallet.id} wallet={wallet} currency={display(wallet.currencyId)} />
-          ))
-        )}
-      </section>
+          {/* Folded by default: a year of wallets would otherwise push the budgets and charts off the
+              screen. An empty list arrives open, because the empty state is the only thing on that
+              screen worth reading. */}
+          <CollapsibleSection
+            title="Wallets"
+            action={
+              <Link href="/wallets" className="text-caption text-ink">
+                All wallets →
+              </Link>
+            }
+            defaultOpen={visibleWallets.length === 0}
+          >
+            {visibleWallets.length === 0 ? (
+              <EmptyState icon={Wallet} title="No wallets yet">
+                <Link href="/wallets" className="text-ink underline">
+                  Add your first wallet
+                </Link>{" "}
+                to start counting.
+              </EmptyState>
+            ) : (
+              visibleWallets.map((wallet) => (
+                <WalletCard key={wallet.id} wallet={wallet} currency={display(wallet.currencyId)} />
+              ))
+            )}
+          </CollapsibleSection>
 
-      <section className="flex flex-col gap-4">
-        <div className="flex items-baseline justify-between"><h2 className="text-subheading text-ink">Budgets</h2><Link href="/budgets" className="text-caption text-ink">Budgets →</Link></div>
-        {data.budgets.length > 0 ? data.budgets.map((bar) => <BudgetBar key={bar.id} bar={bar} currency={primary} />) : <p className="rounded-[16px] border border-hairline bg-card p-5 text-body text-ash">No budget set for {month}.</p>}
-      </section>
+          <NetWorthHistoryChart points={data.history} currency={primary} />
+        </div>
 
-      <DashboardCharts spending={data.spending} trend={data.trend.points} currency={primary} monthLabel={month} />
-      <NetWorthHistoryChart points={data.history} currency={primary} />
-    </div>
+        <div className="flex flex-col gap-6">
+          <section className="flex flex-col gap-4">
+            <div className="flex items-baseline justify-between"><h2 className="text-subheading text-ink">Budgets</h2><Link href="/budgets" className="text-caption text-ink">Budgets →</Link></div>
+            {data.budgets.length > 0 ? data.budgets.map((bar) => <BudgetBar key={bar.id} bar={bar} currency={primary} />) : <p className="rounded-[16px] border border-hairline bg-card p-5 text-body text-ash">No budget set for {month}.</p>}
+          </section>
+
+          <DashboardCharts spending={data.spending} trend={data.trend.points} currency={primary} monthLabel={month} />
+        </div>
+      </div>
+    </>
   );
 }
 

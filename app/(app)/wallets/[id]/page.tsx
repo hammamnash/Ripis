@@ -73,7 +73,7 @@ export default async function WalletDetailPage({ params }: { params: Promise<{ i
     <>
       <ShellHeader title={wallet.name} />
 
-      <div className="flex flex-col gap-6 px-4 pb-10 pt-2">
+      <div className="flex flex-col gap-6 px-4 pb-10 pt-2 md:px-6 md:pb-12 md:pt-4">
         <section
           data-slot="wallet-headline"
           className="flex flex-col gap-1 rounded-[16px] border border-hairline bg-card px-4 py-4"

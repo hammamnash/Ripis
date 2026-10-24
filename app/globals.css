@@ -125,6 +125,10 @@
   --spacing-64: 64px; --spacing-80: 80px;
   --gutter-mobile: 16px;
   --gutter-desktop: 24px;
+  /* Frame geometry, added with the desktop pass. The shell (layout, rail, FAB) reads these three,
+     so the rail's width, the column's ceiling and the FAB's inset cannot drift apart. */
+  --rail-width: 240px;
+  --content-max: 1120px;
 
   /* Radii */
   --radius-tag: 6px;

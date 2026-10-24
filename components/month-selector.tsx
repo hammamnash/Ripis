@@ -59,22 +59,33 @@ export function monthLabel(month: string): string {
 export function MonthSelector({
   month,
   basePath,
+  currentMonth,
   className,
 }: {
   /** `yyyy-mm`. */
   month: string;
   /** The screen's path, so the links are absolute rather than reload-relative. */
   basePath: string;
+  /**
+   * The latest month that may be reached, as `yyyy-mm`. §5 and the mockup both say forward is **disabled at
+   * the current month rather than hidden** — a chevron that disappears leaves the user wondering whether the
+   * screen lost it, and one that stays but dims states the edge of the ledger. Omitted, both directions work,
+   * which is what a screen summarising a closed period wants.
+   */
+  currentMonth?: string;
   className?: string;
 }) {
   const chevron =
     "flex size-[var(--target-min)] shrink-0 items-center justify-center rounded-pill text-ink";
 
+  /* `yyyy-mm` compares correctly as a string: fixed width, zero-padded, most-significant first. */
+  const atLatest = currentMonth !== undefined && month >= currentMonth;
+
   return (
     <div
       data-slot="month-selector"
       data-testid="month-selector"
-      className={cn("flex items-center justify-between px-2 pb-1", className)}
+      className={cn("flex items-center justify-between px-2 pb-1 md:mx-auto md:w-full md:max-w-[22rem]", className)}
     >
       <Link
         href={`${basePath}?month=${shiftMonth(month, -1)}`}
@@ -89,14 +100,26 @@ export function MonthSelector({
         {monthLabel(month)}
       </span>
 
-      <Link
-        href={`${basePath}?month=${shiftMonth(month, 1)}`}
-        aria-label="Next month"
-        data-testid="month-next"
-        className={chevron}
-      >
-        <ChevronRight aria-hidden className="size-5" />
-      </Link>
+      {atLatest ? (
+        <span
+          role="link"
+          aria-disabled="true"
+          aria-label="Next month"
+          data-testid="month-next"
+          className={cn(chevron, "cursor-default opacity-[0.35]")}
+        >
+          <ChevronRight aria-hidden className="size-5" />
+        </span>
+      ) : (
+        <Link
+          href={`${basePath}?month=${shiftMonth(month, 1)}`}
+          aria-label="Next month"
+          data-testid="month-next"
+          className={chevron}
+        >
+          <ChevronRight aria-hidden className="size-5" />
+        </Link>
+      )}
     </div>
   );
 }

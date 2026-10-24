@@ -105,7 +105,7 @@ export function TransactionForm({
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-5 px-4 pb-28 pt-2">
+    <form action={formAction} className="flex flex-col gap-5 px-4 pb-28 pt-2 md:max-w-[720px] md:px-6 md:pb-16">
       <input type="hidden" name="type" value={type} />
       {transactionId === undefined ? null : <input type="hidden" name="id" value={transactionId} />}
 
