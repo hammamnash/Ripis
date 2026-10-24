@@ -125,6 +125,7 @@ export function TransactionRow({
   category,
   currency,
   destination,
+  walletInMeta = true,
 }: {
   transaction: TransactionResponse;
   walletName: string;
@@ -135,6 +136,8 @@ export function TransactionRow({
   currency: CurrencyDisplay;
   /** An exchange's received leg, rendered beneath the sent figure (`→ 5.000.000 ₫`). */
   destination?: { amount: string; currency: CurrencyDisplay } | null;
+  /** `false` on a wallet's own ledger, where the title already names the wallet every row touched. */
+  walletInMeta?: boolean;
 }) {
   const type = transaction.transactionType;
   const typeLabel = type === "exchange" ? "Exchange" : type === "transfer" ? "Transfer" : null;
@@ -150,7 +153,9 @@ export function TransactionRow({
   const meta =
     moved && destinationWalletName
       ? `${walletName} → ${destinationWalletName}`
-      : [category?.name ?? typeLabel ?? "—", walletName].join(" · ");
+      : walletInMeta
+        ? [category?.name ?? typeLabel ?? "—", walletName].join(" · ")
+        : (category?.name ?? typeLabel ?? "—");
 
   const Icon = CATEGORY_ICONS[categoryIconKey(category) ?? ""] ?? TYPE_ICONS[type];
 

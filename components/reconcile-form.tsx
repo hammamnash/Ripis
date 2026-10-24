@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useState } from "react";
 
 import { cn } from "cn";
+import { ChevronDown } from "lucide-react";
 
 import { Amount } from "@/components/amount";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,12 @@ const FIELD =
  * The category picker follows the derived direction rather than offering everything, because the
  * filed row's type is not a choice: an expense category cannot file a correction the ledger decided
  * is an income, and Postgres would refuse it with a sentence about the row, not about the pick.
+ *
+ * **The panel arrives folded.** Reconciling is a correction, not the reason anyone opens a wallet, so the
+ * fields sit behind a native `<details>` disclosure — the same one the dashboard's sections use — with the
+ * recorded figure still on the summary line, because "what does the ledger say" is the question every
+ * reconciliation starts from. A failed submit re-opens it: an error message inside a closed panel is an
+ * error nobody reads.
  */
 export function ReconcileForm({
   walletId,
@@ -77,96 +84,112 @@ export function ReconcileForm({
   const selected = options.some((category) => category.id === categoryId) ? categoryId : "";
 
   return (
-    <form action={formAction} className="flex flex-col gap-4 rounded-[16px] border border-hairline bg-card px-4 py-4">
-      <input type="hidden" name="walletId" value={walletId} />
-
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-body text-ink">Reconcile {walletName}</h2>
-        <div className="flex items-baseline gap-2 text-caption text-ash">
+    <details
+      data-slot="reconcile-panel"
+      className="group rounded-[16px] border border-hairline bg-card px-4 py-3"
+      /* An error filed while the panel is shut would be filed out of sight. */
+      open={state.error === null ? undefined : true}
+    >
+      <summary
+        data-testid="reconcile-toggle"
+        className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden"
+      >
+        <h2 className="flex items-center gap-1.5 text-body text-ink">
+          Reconcile {walletName}
+          <ChevronDown
+            aria-hidden="true"
+            className="size-4 text-ash motion-safe:transition-transform motion-safe:duration-200 group-open:rotate-180"
+          />
+        </h2>
+        <span className="flex items-baseline gap-2 text-caption text-ash">
           <span>Ledger says</span>
           <Amount value={recordedBalance} currency={currency} className="text-body text-ink" />
-        </div>
-      </div>
+        </span>
+      </summary>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="actualBalance">Balance on your statement</Label>
-        <Input
-          id="actualBalance"
-          name="actualBalance"
-          inputMode="decimal"
-          autoComplete="off"
-          placeholder="1250000"
-          value={actualBalance}
-          onChange={(event) => setActualBalance(event.target.value)}
-          className="tabular-nums"
-        />
-        {isLiability ? (
-          <p className="text-caption text-ash">
-            State the debt the way the statement states it. A card owing less than the ledger thinks is
-            money you have gained.
-          </p>
-        ) : null}
-      </div>
+      <form action={formAction} className="flex flex-col gap-4 pt-2">
+        <input type="hidden" name="walletId" value={walletId} />
 
-      {preview === null ? (
-        <p className="text-caption text-ash">Type the figure to see the difference.</p>
-      ) : preview.direction === "match" ? (
-        <p className="text-caption text-ash">
-          That is the balance the ledger already holds, so there is nothing to reconcile.
-        </p>
-      ) : (
-        <div data-testid="reconcile-preview" className="flex flex-col gap-1 rounded-card bg-canvas px-3 py-2">
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="text-caption text-ash">Difference</span>
-            <Amount value={preview.difference} currency={currency} className="text-body text-ink" />
-          </div>
-          <p className="text-caption text-ash">
-            Files an{" "}
-            <span data-testid="reconcile-direction">{preview.direction}</span> of{" "}
-            <Amount value={preview.amount} currency={currency} className="text-ink" /> noted{" "}
-            <span className="text-ink">Balance Difference</span>.
-          </p>
-        </div>
-      )}
-
-      {filing ? (
         <div className="flex flex-col gap-2">
-          <Label htmlFor="categoryId">Category</Label>
-          <select
-            id="categoryId"
-            name="categoryId"
-            value={selected}
-            onChange={(event) => setCategoryId(event.target.value)}
-            className={FIELD}
-          >
-            <option value="">Choose a {preview?.direction} category</option>
-            {options.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
+          <Label htmlFor="actualBalance">Balance on your statement</Label>
+          <Input
+            id="actualBalance"
+            name="actualBalance"
+            inputMode="decimal"
+            autoComplete="off"
+            placeholder="1250000"
+            value={actualBalance}
+            onChange={(event) => setActualBalance(event.target.value)}
+            className="tabular-nums"
+          />
+          {isLiability ? (
+            <p className="text-caption text-ash">
+              State the debt the way the statement states it. A card owing less than the ledger thinks is
+              money you have gained.
+            </p>
+          ) : null}
         </div>
-      ) : null}
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="occurredOn">Date</Label>
-        <Input id="occurredOn" name="occurredOn" type="date" defaultValue={today} className="tabular-nums" />
-      </div>
+        {preview === null ? (
+          <p className="text-caption text-ash">Type the figure to see the difference.</p>
+        ) : preview.direction === "match" ? (
+          <p className="text-caption text-ash">
+            That is the balance the ledger already holds, so there is nothing to reconcile.
+          </p>
+        ) : (
+          <div data-testid="reconcile-preview" className="flex flex-col gap-1 rounded-card bg-canvas px-3 py-2">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="text-caption text-ash">Difference</span>
+              <Amount value={preview.difference} currency={currency} className="text-body text-ink" />
+            </div>
+            <p className="text-caption text-ash">
+              Files an{" "}
+              <span data-testid="reconcile-direction">{preview.direction}</span> of{" "}
+              <Amount value={preview.amount} currency={currency} className="text-ink" /> noted{" "}
+              <span className="text-ink">Balance Difference</span>.
+            </p>
+          </div>
+        )}
 
-      {state.error === null ? null : (
-        <p role="alert" data-testid="reconcile-error" className="text-caption text-destructive">
-          {state.error}
-        </p>
-      )}
+        {filing ? (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="categoryId">Category</Label>
+            <select
+              id="categoryId"
+              name="categoryId"
+              value={selected}
+              onChange={(event) => setCategoryId(event.target.value)}
+              className={FIELD}
+            >
+              <option value="">Choose a {preview?.direction} category</option>
+              {options.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
 
-      <Button
-        type="submit"
-        disabled={pending || !filing || selected === ""}
-        className={cn("w-full", pending && "opacity-70")}
-      >
-        {pending ? "Reconciling…" : "Reconcile wallet"}
-      </Button>
-    </form>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="occurredOn">Date</Label>
+          <Input id="occurredOn" name="occurredOn" type="date" defaultValue={today} className="tabular-nums" />
+        </div>
+
+        {state.error === null ? null : (
+          <p role="alert" data-testid="reconcile-error" className="text-caption text-destructive">
+            {state.error}
+          </p>
+        )}
+
+        <Button
+          type="submit"
+          disabled={pending || !filing || selected === ""}
+          className={cn("w-full", pending && "opacity-70")}
+        >
+          {pending ? "Reconciling…" : "Reconcile wallet"}
+        </Button>
+      </form>
+    </details>
   );
 }

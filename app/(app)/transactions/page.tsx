@@ -1,15 +1,14 @@
 import { List } from "lucide-react";
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { connection } from "next/server";
 
-import { Amount } from "@/components/amount";
 import { EmptyState } from "@/components/empty-state";
+import { LedgerPager } from "@/components/ledger-pager";
 import { MonthSelector, monthLabel } from "@/components/month-selector";
 import { SummaryBand } from "@/components/summary-band";
+import { TransactionDayList } from "@/components/transaction-day-list";
 import { TransactionSearch } from "@/components/transaction-search";
 import { ShellHeader } from "@/components/shell/header";
-import { TransactionRow } from "@/components/transaction-row";
 import { Button } from "@/components/ui/button";
 import { Chip, ChipCount } from "@/components/ui/chip";
 import type { CurrencyDisplay } from "@/src/lib/display-money";
@@ -20,15 +19,14 @@ import { calendarDate, parseCalendarDate } from "@/src/server/time/calendar-date
 import { listTransactions, MAX_PER_PAGE } from "@/src/server/transactions/read-transactions";
 import { readReportQuery } from "@/src/server/reports/filter";
 import { monthSummary } from "@/src/server/reports/month-summary";
-import type { TransactionResponse } from "@/src/server/transactions/serialise";
 
 /*
- * Screen 2 (§7), composed from mockup 001: month selector, the inverted summary band, a filter chip row with
+ * Screen 2 (Â§7), composed from mockup 001: month selector, the inverted summary band, a filter chip row with
  * counts, then hairline-separated rows.
  *
  * The month lives in `?month=yyyy-mm` rather than in component state, so the current view is a URL: a reload
  * reproduces it, the back button steps through it, and the e2e suite can assert a month change without typing.
- * An unparseable value falls back to the current month instead of throwing — a hand-edited query string is not
+ * An unparseable value falls back to the current month instead of throwing â€” a hand-edited query string is not
  * a server error, and `calendarDate` is the app's one notion of "today" (UTC, ADR-0007). The type filter is a
  * URL for the same reason, which is why the chip row is a `method="get"` form of submit buttons and not a
  * client-side filter: the same HTML works before hydration and the browser's back button steps through filters.
@@ -36,20 +34,19 @@ import type { TransactionResponse } from "@/src/server/transactions/serialise";
  * The rows arrive with ids and no names, so this screen joins them. That join is the page's job: the list
  * module knows nothing about what a wallet is called, and the row knows nothing about the database.
  *
- * **Days are kept.** The mockup draws one flat list of 45 rows because it has no day grouping; this screen
- * groups by `occurred_on` and labels each group with the day and its net, so the date is dropped from every
- * row's meta line instead of repeating it 45 times.
+ * **Days are kept** â€” `TransactionDayList` groups them, which is the same component a wallet's own ledger
+ * draws with its wallet column dropped (screen 7).
  */
 /* Per segment, like the `connection()` call it accompanies: the frame's opt-out does not reach this file. */
 export const instant = false;
 
-/** The chip row's fixed vocabulary. `transfer` covers `exchange` too — see the `typeIn` note below. */
+/** The chip row's fixed vocabulary. `transfer` covers `exchange` too â€” see the `typeIn` note below. */
 const TYPE_CHIPS = ["expense", "income", "transfer"] as const;
 
 export default async function TransactionsPage({ searchParams }: PageProps<"/transactions">) {
   /* Request data, twice over: `searchParams` and the fallback month, which is whatever month it is now. Next
      still attempted a prerender pass here and logged `unstable value new Date()` for every navigation to this
-     screen — the frame declares `connection()` for itself, and a page has to say it for its own reads. */
+     screen â€” the frame declares `connection()` for itself, and a page has to say it for its own reads. */
   await connection();
 
   const { caller } = await requireScreenSession();
@@ -137,12 +134,7 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
       : { symbol: code, suffix: false, minorUnit: 2 };
   };
 
-  const days: { on: string; rows: TransactionResponse[] }[] = [];
-  for (const row of data.listed.data) {
-    const last = days[days.length - 1];
-    if (last && last.on === row.occurredOn) last.rows.push(row);
-    else days.push({ on: row.occurredOn, rows: [row] });
-  }
+  const isListEmpty = data.listed.data.length === 0;
 
   const noun = typeFilter === "" ? "transactions" : `${typeFilter} rows`;
   const emptySentence =
@@ -152,14 +144,11 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
         ? `No ${noun} match this filter. Widen it, or log one and it appears immediately.`
         : `No ${noun} in this month. Log one and it appears immediately.`;
 
-  const pageHref = (target: number): string => {
-    const query = new URLSearchParams({ month, page: String(target) });
-    if (typeFilter) query.set("type", typeFilter);
-    if (walletFilter) query.set("wallet", walletFilter);
-    if (categoryFilter) query.set("category", categoryFilter);
-    if (search) query.set("q", search);
-    return `/transactions?${query.toString()}`;
-  };
+  const pagerQuery: Record<string, string> = { month };
+  if (typeFilter) pagerQuery.type = typeFilter;
+  if (walletFilter) pagerQuery.wallet = walletFilter;
+  if (categoryFilter) pagerQuery.category = categoryFilter;
+  if (search) pagerQuery.q = search;
 
   return (
     <>
@@ -251,7 +240,7 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
           ) : null}
         </form>
 
-        {days.length === 0 ? (
+        {isListEmpty ? (
           <EmptyState
             icon={List}
             title={`Nothing here for ${monthLabel(month)}`}
@@ -264,95 +253,23 @@ export default async function TransactionsPage({ searchParams }: PageProps<"/tra
             {emptySentence}
           </EmptyState>
         ) : (
-          <div data-slot="transaction-list" className="flex flex-col gap-6">
-            {days.map((day) => (
-              <section key={day.on} data-slot="transaction-day" className="flex flex-col">
-                <div className="flex items-baseline justify-between gap-2 pb-1">
-                  <h2 className="text-micro uppercase tracking-micro text-ash">{dayLabel(day.on)}</h2>
-                  {/* A day of nothing but transfers has no income and no expense, so its net is a true zero and
-                      a "Rp 0" label beside three rows would read as a bug rather than as an answer. */}
-                  {day.rows.some((row) => row.transactionType === "income" || row.transactionType === "expense") ? (
-                    <Amount
-                      value={sumSigned(day.rows)}
-                      currency={display(day.rows[0]?.baseCurrencyId ?? "IDR")}
-                      tone="ash"
-                      className="text-caption"
-                    />
-                  ) : null}
-                </div>
-                {day.rows.map((row) => {
-                  /* An exchange's received leg is stored in the *destination wallet's* currency, which the row
-                     does not carry — the wallet does. A missing wallet falls back to the row's own currency
-                     rather than to the base one, so the figure is never silently relabelled. */
-                  const destination =
-                    row.transactionType === "exchange" &&
-                    row.destinationAmount !== null &&
-                    row.destinationWalletId !== null
-                      ? {
-                          amount: row.destinationAmount,
-                          currency: display(walletCurrency.get(row.destinationWalletId) ?? row.currencyId),
-                        }
-                      : null;
-
-                  return (
-                    <TransactionRow
-                      key={row.id}
-                      transaction={row}
-                      walletName={walletName.get(row.walletId) ?? "Wallet"}
-                      destinationWalletName={
-                        row.destinationWalletId === null
-                          ? null
-                          : (walletName.get(row.destinationWalletId) ?? null)
-                      }
-                      category={row.categoryId === null ? null : (categories.get(row.categoryId) ?? null)}
-                      currency={display(row.currencyId)}
-                      destination={destination}
-                    />
-                  );
-                })}
-              </section>
-            ))}
-          </div>
+          <TransactionDayList
+            rows={data.listed.data}
+            walletName={walletName}
+            walletCurrency={walletCurrency}
+            categories={categories}
+            display={display}
+          />
         )}
       </div>
 
-      {data.listed.totalPages > 1 ? (
-        <nav data-slot="transaction-pager" className="flex items-center justify-between gap-3 px-4 pb-10 pt-2 md:px-6 md:pb-12">
-          <PagerLink href={pageHref(data.listed.page - 1)} disabled={data.listed.page <= 1}>
-            Newer
-          </PagerLink>
-          <p className="text-caption text-ash">
-            Page {data.listed.page} of {data.listed.totalPages}
-          </p>
-          <PagerLink
-            href={pageHref(data.listed.page + 1)}
-            disabled={data.listed.page >= data.listed.totalPages}
-          >
-            Older
-          </PagerLink>
-        </nav>
-      ) : null}
+      <LedgerPager
+        page={data.listed.page}
+        totalPages={data.listed.totalPages}
+        basePath="/transactions"
+        query={pagerQuery}
+      />
     </>
-  );
-}
-
-/** A disabled step is a span, not a link: an href onto the page you are already reading is a control that lies. */
-function PagerLink({
-  href,
-  disabled,
-  children,
-}: {
-  href: string;
-  disabled: boolean;
-  children: ReactNode;
-}) {
-  if (disabled) {
-    return <span aria-disabled="true" className="text-caption text-ash">{children}</span>;
-  }
-  return (
-    <Link href={href} className="text-caption text-ink underline underline-offset-4">
-      {children}
-    </Link>
   );
 }
 
@@ -361,44 +278,4 @@ function lastDayOf(month: string): string {
   const year = Number(month.slice(0, 4));
   const index = Number(month.slice(5, 7));
   return String(new Date(Date.UTC(year, index, 0)).getUTCDate()).padStart(2, "0");
-}
-
-/** `Tue 14 Oct`, in UTC because `occurredOn` is a date and not an instant (ADR-0007). */
-function dayLabel(occurredOn: string): string {
-  return new Date(`${occurredOn}T00:00:00Z`).toLocaleDateString("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    timeZone: "UTC",
-  });
-}
-
-const SCALE = 4;
-
-/** A decimal string as an integer number of 1e-4 units. Money is never a float, not even for a day total. */
-function toScaled(value: string): bigint {
-  const negative = value.startsWith("-");
-  const [whole = "0", fraction = ""] = value.replace(/^[-+]/, "").split(".");
-  const digits = `${whole}${(fraction + "0".repeat(SCALE)).slice(0, SCALE)}`.replace(/^0+(?=\d)/, "") || "0";
-  const scaled = BigInt(digits);
-  return negative ? -scaled : scaled;
-}
-
-function fromScaled(scaled: bigint): string {
-  const negative = scaled < 0n;
-  const text = (negative ? -scaled : scaled).toString().padStart(SCALE + 1, "0");
-  return `${negative ? "-" : ""}${text.slice(0, -SCALE)}.${text.slice(-SCALE)}`;
-}
-
-/**
- * The day's net, in the base currency: income minus expense. A transfer or an exchange moves money between
- * wallets without changing what the day cost, so it contributes nothing.
- */
-function sumSigned(rows: TransactionResponse[]): string {
-  let total = 0n;
-  for (const row of rows) {
-    if (row.transactionType === "income") total += toScaled(row.baseAmount);
-    else if (row.transactionType === "expense") total -= toScaled(row.baseAmount);
-  }
-  return fromScaled(total);
 }

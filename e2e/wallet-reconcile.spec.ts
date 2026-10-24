@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 /*
  * Task B (FR-09, ADR-0017). The handoff's spec: type the real balance on the wallet screen, assert
@@ -16,6 +16,12 @@ import { expect, test } from "@playwright/test";
  * the server files must be the same direction, seen through the form.
  */
 const prisma = new PrismaClient();
+
+/** The reconcile panel arrives folded, so the fields a spec types into are not on screen until it is opened. */
+async function openReconcile(page: Page) {
+  await page.getByTestId("reconcile-toggle").click();
+  await expect(page.getByLabel("Balance on your statement")).toBeVisible();
+}
 
 let walletId = "";
 let expenseCategoryId = "";
@@ -52,6 +58,10 @@ test.beforeAll(async () => {
 test("reconciling down files one expense and lands the balance on the statement figure", async ({ page }) => {
   await page.goto(`/wallets/${walletId}`);
 
+  /* Folded until asked: a wallet's screen is its ledger, and reconciling is a correction to it. */
+  await expect(page.getByLabel("Balance on your statement")).toBeHidden();
+  await openReconcile(page);
+
   await page.getByLabel("Balance on your statement").fill("950000");
 
   /* The preview is the promise: an expense of 50.000, stated before anything is submitted. */
@@ -83,6 +93,7 @@ test("reconciling down files one expense and lands the balance on the statement 
 test("reconciling up files an income", async ({ page }) => {
   await page.goto(`/wallets/${walletId}`);
 
+  await openReconcile(page);
   await page.getByLabel("Balance on your statement").fill("1000000");
   await expect(page.getByTestId("reconcile-direction")).toHaveText("income");
 
@@ -110,6 +121,7 @@ test("reconciling up files an income", async ({ page }) => {
 test("a statement that already matches is refused on the screen, not filed", async ({ page }) => {
   await page.goto(`/wallets/${walletId}`);
 
+  await openReconcile(page);
   await page.getByLabel("Balance on your statement").fill("1000000");
   await expect(page.getByTestId("reconcile-preview")).toHaveCount(0);
   await expect(page.getByText("already holds")).toBeVisible();

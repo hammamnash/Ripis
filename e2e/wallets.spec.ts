@@ -63,5 +63,10 @@ test("both sides of the balance sheet are listed, and a card opens its wallet", 
 
   await page.getByText(ASSET, { exact: true }).first().click();
   await expect(page).toHaveURL(/\/wallets\/[0-9a-f-]{36}/);
-  await expect(page.getByText("Last 20 entries")).toBeVisible();
+
+  /* Screen 7's ledger is screen 2 narrowed to one wallet: a month selector, the inverted band over that
+     wallet's month, the type chips, and the rows beneath them. */
+  await expect(page.getByTestId("month-selector")).toBeVisible();
+  await expect(page.getByTestId("summary-band")).toBeVisible();
+  await expect(page.getByRole("group", { name: "Filter by type" })).toBeVisible();
 });
